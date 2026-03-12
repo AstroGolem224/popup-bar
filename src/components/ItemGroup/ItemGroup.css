@@ -1,0 +1,23 @@
+/* ItemGroup — visual grouping container for related shelf items */
+.item-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.item-group__label {
+  font-size: 10px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.7);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.item-group__items {
+  display: flex;
+  gap: 8px;
+}

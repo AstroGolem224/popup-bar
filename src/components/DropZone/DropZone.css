@@ -1,0 +1,13 @@
+/* DropZone — receives external drag-and-drop items */
+.drop-zone {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  transition: outline 0.2s ease;
+}
+
+.drop-zone--active {
+  outline: 2px dashed rgba(255, 255, 255, 0.5);
+  outline-offset: -4px;
+  border-radius: 0 0 16px 16px;
+}
