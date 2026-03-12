@@ -1,33 +1,35 @@
-import { useState, type DragEventHandler } from "react";
+/**
+ * Hook: Drag & Drop handlers.
+ *
+ * Provides event handlers for drag-over, drag-leave, and drop events.
+ * Phase 0: Returns no-op handlers.
+ * Phase 3: Wired to Tauri file-drop events + DndHandler.
+ */
+import { type DragEvent } from "react";
 
-/** Manages drag-and-drop state for a shelf item or drop zone. */
-export function useDragDrop(_targetId: string) {
-  const [isOver, setIsOver] = useState(false);
+interface UseDragDropReturn {
+  /** Whether a drag is currently over the drop zone. */
+  isDragOver: boolean;
+  /** Handle drag enter/over. */
+  onDragOver: (e: DragEvent) => void;
+  /** Handle drag leave. */
+  onDragLeave: (e: DragEvent) => void;
+  /** Handle drop. */
+  onDrop: (e: DragEvent) => void;
+}
 
-  const dragHandlers = {
-    draggable: true,
-    onDragStart: (() => {
-      // TODO: Set drag data
-    }) as DragEventHandler,
-    onDragEnd: (() => {
-      // TODO: Clean up drag state
-    }) as DragEventHandler,
-  };
-
-  const dropHandlers = {
-    onDragOver: ((e: React.DragEvent) => {
+export function useDragDrop(): UseDragDropReturn {
+  return {
+    isDragOver: false,
+    onDragOver: (e: DragEvent) => {
       e.preventDefault();
-      setIsOver(true);
-    }) as DragEventHandler,
-    onDragLeave: (() => {
-      setIsOver(false);
-    }) as DragEventHandler,
-    onDrop: ((e: React.DragEvent) => {
+    },
+    onDragLeave: (_e: DragEvent) => {
+      // Phase 3
+    },
+    onDrop: (e: DragEvent) => {
       e.preventDefault();
-      setIsOver(false);
-      // TODO: Process drop
-    }) as DragEventHandler,
+      console.warn("onDrop: not implemented (Phase 3)");
+    },
   };
-
-  return { isOver, dragHandlers, dropHandlers };
 }

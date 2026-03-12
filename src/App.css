@@ -1,7 +1,17 @@
-/* Main app container — fills the transparent Tauri window */
+/* Root app container — full viewport, transparent */
 .app {
   width: 100vw;
   height: 100vh;
-  overflow: hidden;
+  background: transparent;
   position: relative;
+  overflow: hidden;
+}
+
+.app--visible {
+  opacity: 1;
+}
+
+.app--hidden {
+  opacity: 0;
+  pointer-events: none;
 }

@@ -1,21 +1,23 @@
-import { useState, useEffect } from "react";
-import { listen } from "@tauri-apps/api/event";
-import { EVENTS } from "../types/events";
+/**
+ * Hook: Hotzone visibility state.
+ *
+ * Listens to hotzone:enter / hotzone:leave events from the Rust backend
+ * and exposes whether the popup bar should be visible.
+ *
+ * Phase 0: Always returns visible (true).
+ * Phase 1: Wired to actual Tauri events.
+ */
+import { useState } from "react";
 
-/** Tracks whether the popup bar should be visible based on hotzone events. */
-export function useHotzoneState() {
-  const [isVisible, setIsVisible] = useState(false);
+interface HotzoneState {
+  /** Whether the popup bar should be visible. */
+  isVisible: boolean;
+}
 
-  useEffect(() => {
-    const unlisten = Promise.all([
-      listen(EVENTS.HOTZONE_ENTER, () => setIsVisible(true)),
-      listen(EVENTS.HOTZONE_LEAVE, () => setIsVisible(false)),
-    ]);
+export function useHotzoneState(): HotzoneState {
+  // Phase 0: Always visible for development.
+  // Phase 1: Replace with Tauri event listener.
+  const [isVisible] = useState(true);
 
-    return () => {
-      unlisten.then((fns) => fns.forEach((fn) => fn()));
-    };
-  }, []);
-
-  return { isVisible, setIsVisible };
+  return { isVisible };
 }

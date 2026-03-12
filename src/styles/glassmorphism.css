@@ -1,19 +1,29 @@
-/* Glassmorphism utility classes */
-
+/* Glassmorphism utility classes
+ *
+ * Uses CSS custom properties for runtime configurability.
+ * Blur + tint via backdrop-filter with border highlight.
+ */
 .glass {
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.37);
+  --glass-blur: 20px;
+  --glass-tint: rgba(255, 255, 255, 0.08);
+  --glass-border: rgba(255, 255, 255, 0.15);
+  --glass-shadow: rgba(0, 0, 0, 0.3);
+
+  background: var(--glass-tint);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 8px 32px var(--glass-shadow);
 }
 
-.glass--dark {
-  background: rgba(0, 0, 0, 0.25);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-}
-
+/* Lighter variant for nested elements */
 .glass--light {
-  background: rgba(255, 255, 255, 0.25);
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  --glass-tint: rgba(255, 255, 255, 0.12);
+  --glass-border: rgba(255, 255, 255, 0.2);
+}
+
+/* Darker variant for contrast */
+.glass--dark {
+  --glass-tint: rgba(0, 0, 0, 0.3);
+  --glass-border: rgba(255, 255, 255, 0.1);
 }

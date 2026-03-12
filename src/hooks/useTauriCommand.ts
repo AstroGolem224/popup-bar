@@ -1,32 +1,29 @@
-import { useState, useCallback } from "react";
-import { invoke } from "@tauri-apps/api/core";
+/**
+ * Hook: Generic Tauri command invoker.
+ *
+ * Provides a typed wrapper around Tauri's invoke API with
+ * loading state and error handling.
+ *
+ * Phase 0: Returns a stub invoker that logs to console.
+ * Phase 1+: Wired to @tauri-apps/api invoke.
+ */
 
-/** Generic hook for invoking Tauri commands with loading/error state. */
-export function useTauriCommand<TArgs extends Record<string, unknown>, TResult>(
-  command: string,
-) {
-  const [data, setData] = useState<TResult | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+interface UseTauriCommandReturn<T> {
+  /** Execute a Tauri command by name. */
+  invoke: (command: string, args?: Record<string, unknown>) => Promise<T | null>;
+  /** Whether a command is currently in flight. */
+  isLoading: boolean;
+  /** Last error message, if any. */
+  error: string | null;
+}
 
-  const execute = useCallback(
-    async (args?: TArgs): Promise<TResult | null> => {
-      setLoading(true);
-      setError(null);
-      try {
-        const result = await invoke<TResult>(command, args ?? {});
-        setData(result);
-        return result;
-      } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
-        setError(message);
-        return null;
-      } finally {
-        setLoading(false);
-      }
+export function useTauriCommand<T = unknown>(): UseTauriCommandReturn<T> {
+  return {
+    invoke: async (command: string, args?: Record<string, unknown>): Promise<T | null> => {
+      console.warn(`Tauri invoke stub: ${command}`, args);
+      return null;
     },
-    [command],
-  );
-
-  return { data, error, loading, execute };
+    isLoading: false,
+    error: null,
+  };
 }

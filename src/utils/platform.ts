@@ -1,18 +1,19 @@
-import { platform as getPlatform } from "@tauri-apps/plugin-os";
+/**
+ * Platform detection utilities.
+ *
+ * Uses navigator.userAgent as a lightweight fallback
+ * that works without additional Tauri plugins.
+ */
 
 export type Platform = "windows" | "macos" | "linux" | "unknown";
 
-/** Detect the current operating system. */
+/** Detect the current operating system from the user agent. */
 export function detectPlatform(): Platform {
-  try {
-    const os = getPlatform();
-    if (os === "windows") return "windows";
-    if (os === "macos") return "macos";
-    if (os === "linux") return "linux";
-    return "unknown";
-  } catch {
-    return "unknown";
-  }
+  const ua = navigator.userAgent.toLowerCase();
+  if (ua.includes("win")) return "windows";
+  if (ua.includes("mac")) return "macos";
+  if (ua.includes("linux")) return "linux";
+  return "unknown";
 }
 
 /** Check if the current platform supports native vibrancy. */

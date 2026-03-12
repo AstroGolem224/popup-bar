@@ -1,26 +1,30 @@
-/* Global reset and base styles */
+/* Global reset — transparent background for Tauri window */
 *,
 *::before,
 *::after {
+  box-sizing: border-box;
   margin: 0;
   padding: 0;
-  box-sizing: border-box;
 }
 
 html,
 body {
   width: 100%;
   height: 100%;
-  overflow: hidden;
+  margin: 0;
+  padding: 0;
   background: transparent;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
-    Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
+  overflow: hidden;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  user-select: none;
+  color: rgba(255, 255, 255, 0.9);
 }
 
 #root {
   width: 100%;
   height: 100%;
+  background: transparent;
 }
