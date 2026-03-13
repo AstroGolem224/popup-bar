@@ -1,28 +1,28 @@
 import { ShelfItem as ShelfItemComponent } from "../ShelfItem";
-import { ItemGroup as ItemGroupComponent } from "../ItemGroup";
-import type { ShelfItem, ItemGroup } from "../../types/shelf";
+import type { ShelfItem } from "../../types/shelf";
+import { useItemReorder } from "../../hooks/useItemReorder";
 import "./ShelfGrid.css";
 
 export interface ShelfGridProps {
   items: ShelfItem[];
-  groups: ItemGroup[];
+  /** When user clicks delete (X) on an item. */
+  onDeleteItem?: (id: string) => void | Promise<void>;
 }
 
-export function ShelfGrid({ items, groups }: ShelfGridProps) {
+export function ShelfGrid({ items, onDeleteItem }: ShelfGridProps) {
+  const { onDragStart, onDropOnItem } = useItemReorder();
+
   return (
     <div className="shelf-grid">
-      {groups.map((group) => (
-        <ItemGroupComponent
-          key={group.id}
-          group={group}
-          items={items.filter((item) => item.groupId === group.id)}
+      {items.map((item) => (
+        <ShelfItemComponent
+          key={item.id}
+          item={item}
+          onDragStartItem={onDragStart}
+          onDropOnItem={onDropOnItem}
+          onDelete={onDeleteItem}
         />
       ))}
-      {items
-        .filter((item) => !item.groupId)
-        .map((item) => (
-          <ShelfItemComponent key={item.id} item={item} />
-        ))}
     </div>
   );
 }

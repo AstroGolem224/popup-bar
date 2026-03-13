@@ -1,0 +1,1 @@
+{"main-capability":{"identifier":"main-capability","description":"Main window: event listen (hotzone), window, app defaults","local":true,"windows":["main"],"permissions":["core:event:default","core:window:default","core:app:default"]}}

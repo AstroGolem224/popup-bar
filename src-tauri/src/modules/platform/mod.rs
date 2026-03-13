@@ -19,7 +19,7 @@ pub struct MousePosition {
 }
 
 /// Platform-agnostic interface for OS-level operations.
-pub trait PlatformProvider {
+pub trait PlatformProvider: Send + Sync {
     /// Register a hotzone listener at the top screen edge.
     fn register_hotzone(&self, height: u32) -> Result<(), String>;
 

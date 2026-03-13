@@ -3,11 +3,14 @@ export type Theme = "light" | "dark" | "system";
 export interface Settings {
   hotzoneSize: number;
   animationSpeed: number;
-  blurIntensity: number;
+  /** Nicht mehr in der UI; wird weiterhin für Backend-Kompatibilität mitgesendet. */
+  blurIntensity?: number;
   tintColor: string;
   theme: Theme;
   autostart: boolean;
   multiMonitor: boolean;
+  barWidthPx: number;
+  barHeightPx: number;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -18,4 +21,6 @@ export const DEFAULT_SETTINGS: Settings = {
   theme: "system",
   autostart: false,
   multiMonitor: false,
+  barWidthPx: 480,
+  barHeightPx: 72,
 };

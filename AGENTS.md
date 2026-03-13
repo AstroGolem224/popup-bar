@@ -40,6 +40,7 @@
 ## Workflow-Regeln (STRIKT)
 
 ### 1. Planung vor Implementierung
+
 - **VOR** jeder Implementierung die Planungsdokumente lesen:
   - `docs/architecture/ARCHITECTURE.md` — System-Architektur
   - `docs/architecture/MODULES.md` — Modulstruktur
@@ -48,11 +49,13 @@
 - Falls keine Planung existiert: **erst planen, dann coden**
 
 ### 2. Lesen vor Schreiben
+
 - **IMMER** eine Datei lesen bevor sie überschrieben wird
 - Verstehen was da ist → dann gezielt ändern
 - Keine blinden Überschreibungen
 
 ### 3. Commit-Messages
+
 - Conventional Commits: `feat(phase-X):`, `fix:`, `docs:`, `refactor:`
 - Kurze Zusammenfassung + Aufzählung der Änderungen
 - Referenz auf Phase/Aufgabe aus dem Implementierungsplan
@@ -82,6 +85,7 @@
 `App → DropZone → ShelfBar → ShelfGrid → ShelfItem / ItemGroup`
 
 ### Schnittstelle Rust ↔ Frontend
+
 - **Commands** (Request-Response): `get_shelf_items`, `add_shelf_item`, `get_settings`, etc.
 - **Events** (Pub-Sub): `hotzone:enter`, `hotzone:leave`, `shelf:updated`, `window:show`, etc.
 
@@ -101,11 +105,11 @@
 | Phase | Was | Status |
 |-------|-----|--------|
 | 0 | Fundament: Scaffold, CI/CD, Vibrancy, Glasmorphism | ✅ Done |
-| 1 | Hotzone-Detection + Slide-Animation | ⬜ Next |
-| 2 | Shelf Core: SQLite, CRUD, Grid-UI | ⬜ |
-| 3 | Drag & Drop | ⬜ |
-| 4 | Icons & Visuals | ⬜ |
-| 5 | Settings-UI, Autostart, Performance | ⬜ |
-| 6 | Testing & Release | ⬜ |
+| 1 | Hotzone-Detection + Slide-Animation | ✅ Done |
+| 2 | Shelf Core: SQLite, CRUD, Grid-UI | ✅ Done |
+| 3 | Drag & Drop | ✅ Done |
+| 4 | Icons & Visuals | ✅ Done |
+| 5 | Settings-UI, Autostart, Performance | ✅ Done |
+| 6 | Testing & Release | ⬜ Offen |
 
 Details: `docs/architecture/IMPLEMENTATION_PLAN.md`

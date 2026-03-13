@@ -13,7 +13,7 @@ export interface DropZoneProps {
 }
 
 export function DropZone({ children }: DropZoneProps) {
-  const { isDragOver, onDragOver, onDragLeave, onDrop } = useDragDrop();
+  const { isDragOver, dragHint, onDragOver, onDragLeave, onDrop } = useDragDrop();
 
   return (
     <div
@@ -22,6 +22,7 @@ export function DropZone({ children }: DropZoneProps) {
       onDragLeave={onDragLeave}
       onDrop={onDrop}
     >
+      {isDragOver ? <div className="drop-zone__overlay">{dragHint}</div> : null}
       {children}
     </div>
   );

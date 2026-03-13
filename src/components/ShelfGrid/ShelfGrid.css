@@ -1,4 +1,5 @@
-/* ShelfGrid — layout grid for shelf items and groups */
+/* ShelfGrid — layout grid for shelf items and groups.
+   z-index below trash/settings so those absolute elements receive drag/drop. */
 .shelf-grid {
   display: flex;
   flex-wrap: wrap;
@@ -7,4 +8,6 @@
   justify-content: center;
   width: 100%;
   height: 100%;
+  position: relative;
+  z-index: 1;
 }

@@ -2,10 +2,15 @@
 //!
 //! Manages the shelf items and groups stored in a local SQLite database.
 //! Provides the core data layer for creating, reading, updating, and
-//! deleting shelf entries. Full SQLite integration in Phase 2.
+//! deleting shelf entries.
 
-use serde::{Deserialize, Serialize};
 use log::info;
+use serde::{Deserialize, Serialize};
+use sqlx::Row;
+use std::path::PathBuf;
+use std::str::FromStr;
+use tokio::sync::OnceCell;
+use uuid::Uuid;
 
 /// The type of item stored on the shelf.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -17,16 +22,36 @@ pub enum ItemType {
     Url,
 }
 
+impl FromStr for ItemType {
+    type Err = String;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        match value.to_ascii_lowercase().as_str() {
+            "file" => Ok(Self::File),
+            "folder" => Ok(Self::Folder),
+            "app" => Ok(Self::App),
+            "url" => Ok(Self::Url),
+            _ => Err(format!("unsupported item type: {value}")),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Position {
+    pub x: f64,
+    pub y: f64,
+}
+
 /// A single item on the shelf.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ShelfItem {
     pub id: String,
     pub item_type: ItemType,
     pub path: String,
     pub display_name: String,
     pub icon_cache_key: String,
-    pub position_x: f64,
-    pub position_y: f64,
+    pub position: Position,
     pub group_id: Option<String>,
     pub created_at: String,
     pub last_used: String,
@@ -34,60 +59,284 @@ pub struct ShelfItem {
 
 /// A group of shelf items.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ItemGroup {
     pub id: String,
     pub name: String,
     pub color: Option<String>,
-    pub position_x: f64,
-    pub position_y: f64,
+    pub position: Position,
 }
 
-/// Handles all shelf data persistence.
-/// Phase 2: Backed by SQLite via tauri-plugin-sql.
 pub struct ShelfStore;
 
+static DB_PATH: OnceCell<PathBuf> = OnceCell::const_new();
+static DB_POOL: OnceCell<sqlx::SqlitePool> = OnceCell::const_new();
+
 impl ShelfStore {
-    /// Initialize the database schema.
-    /// Phase 2: Runs CREATE TABLE migrations.
+    /// Set the database file path (must be called before any DB access, e.g. in setup).
+    pub fn set_db_path(path: PathBuf) {
+        let _ = DB_PATH.set(path);
+    }
+
+    /// Get the database path, or a default relative path if not set.
+    pub fn get_db_path() -> PathBuf {
+        DB_PATH.get().cloned().unwrap_or_else(|| PathBuf::from("popup-bar.db"))
+    }
+
+    async fn pool() -> Result<&'static sqlx::SqlitePool, String> {
+        DB_POOL
+            .get_or_try_init(|| async {
+                let path = Self::get_db_path();
+                let url = format!("sqlite:{}", path.display());
+                let pool = sqlx::SqlitePool::connect(&url)
+                    .await
+                    .map_err(|e| e.to_string())?;
+                Ok::<sqlx::SqlitePool, String>(pool)
+            })
+            .await
+    }
+
+    fn row_to_item(row: &sqlx::sqlite::SqliteRow) -> Result<ShelfItem, String> {
+        let item_type_raw: String = row.try_get("item_type").map_err(|e| e.to_string())?;
+        Ok(ShelfItem {
+            id: row.try_get("id").map_err(|e| e.to_string())?,
+            item_type: ItemType::from_str(&item_type_raw)?,
+            path: row.try_get("path").map_err(|e| e.to_string())?,
+            display_name: row.try_get("display_name").map_err(|e| e.to_string())?,
+            icon_cache_key: row.try_get("icon_cache_key").map_err(|e| e.to_string())?,
+            position: Position {
+                x: row.try_get("position_x").map_err(|e| e.to_string())?,
+                y: row.try_get("position_y").map_err(|e| e.to_string())?,
+            },
+            group_id: row.try_get("group_id").map_err(|e| e.to_string())?,
+            created_at: row.try_get("created_at").map_err(|e| e.to_string())?,
+            last_used: row.try_get("last_used").map_err(|e| e.to_string())?,
+        })
+    }
+
+    fn row_to_group(row: &sqlx::sqlite::SqliteRow) -> Result<ItemGroup, String> {
+        Ok(ItemGroup {
+            id: row.try_get("id").map_err(|e| e.to_string())?,
+            name: row.try_get("name").map_err(|e| e.to_string())?,
+            color: row.try_get("color").map_err(|e| e.to_string())?,
+            position: Position {
+                x: row.try_get("position_x").map_err(|e| e.to_string())?,
+                y: row.try_get("position_y").map_err(|e| e.to_string())?,
+            },
+        })
+    }
+
     pub async fn init_db() -> Result<(), String> {
-        info!("ShelfStore: init_db (stub — Phase 2)");
+        let pool = Self::pool().await?;
+        sqlx::query("PRAGMA foreign_keys = ON;")
+            .execute(pool)
+            .await
+            .map_err(|e| e.to_string())?;
+        sqlx::migrate!("./migrations")
+            .run(pool)
+            .await
+            .map_err(|e| e.to_string())?;
+
+        info!("ShelfStore: database initialized");
         Ok(())
     }
 
-    /// Get all shelf items. Returns empty vec until Phase 2.
     pub async fn get_all_items() -> Result<Vec<ShelfItem>, String> {
-        info!("ShelfStore: get_all_items (stub — Phase 2)");
-        Ok(vec![])
+        let pool = Self::pool().await?;
+        let rows = sqlx::query(
+            "SELECT id, item_type, path, display_name, icon_cache_key, position_x, position_y, group_id, created_at, last_used
+             FROM shelf_items
+             ORDER BY position_x ASC, position_y ASC",
+        )
+        .fetch_all(pool)
+        .await
+        .map_err(|e| e.to_string())?;
+
+        rows.iter().map(Self::row_to_item).collect()
     }
 
-    /// Add a new item to the shelf.
-    pub async fn add_item(_item: ShelfItem) -> Result<ShelfItem, String> {
-        Err("ShelfStore: add_item not implemented (Phase 2)".into())
+    pub async fn add_item(item: ShelfItem) -> Result<ShelfItem, String> {
+        let pool = Self::pool().await?;
+
+        sqlx::query(
+            "INSERT INTO shelf_items (id, item_type, path, display_name, icon_cache_key, position_x, position_y, group_id, created_at, last_used)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, COALESCE(NULLIF(?9, ''), strftime('%Y-%m-%dT%H:%M:%SZ', 'now')), COALESCE(NULLIF(?10, ''), strftime('%Y-%m-%dT%H:%M:%SZ', 'now')))",
+        )
+        .bind(&item.id)
+        .bind(match item.item_type {
+            ItemType::File => "file",
+            ItemType::Folder => "folder",
+            ItemType::App => "app",
+            ItemType::Url => "url",
+        })
+        .bind(&item.path)
+        .bind(&item.display_name)
+        .bind(&item.icon_cache_key)
+        .bind(item.position.x)
+        .bind(item.position.y)
+        .bind(&item.group_id)
+        .bind(&item.created_at)
+        .bind(&item.last_used)
+        .execute(pool)
+        .await
+        .map_err(|e| e.to_string())?;
+
+        let row = sqlx::query(
+            "SELECT id, item_type, path, display_name, icon_cache_key, position_x, position_y, group_id, created_at, last_used
+             FROM shelf_items WHERE id = ?1",
+        )
+        .bind(&item.id)
+        .fetch_one(pool)
+        .await
+        .map_err(|e| e.to_string())?;
+
+        Self::row_to_item(&row)
     }
 
-    /// Remove an item by ID.
-    pub async fn remove_item(_id: &str) -> Result<(), String> {
-        Err("ShelfStore: remove_item not implemented (Phase 2)".into())
+    pub async fn add_items(items: Vec<ShelfItem>) -> Result<Vec<ShelfItem>, String> {
+        let mut added = Vec::with_capacity(items.len());
+        for item in items {
+            added.push(Self::add_item(item).await?);
+        }
+        Ok(added)
     }
 
-    /// Update an existing item.
-    pub async fn update_item(_item: ShelfItem) -> Result<ShelfItem, String> {
-        Err("ShelfStore: update_item not implemented (Phase 2)".into())
+    pub async fn remove_item(id: &str) -> Result<(), String> {
+        let pool = Self::pool().await?;
+        sqlx::query("DELETE FROM shelf_items WHERE id = ?1")
+            .bind(id)
+            .execute(pool)
+            .await
+            .map_err(|e| e.to_string())?;
+        Ok(())
     }
 
-    /// Get all item groups. Returns empty vec until Phase 2.
+    pub async fn update_item(item: ShelfItem) -> Result<ShelfItem, String> {
+        let pool = Self::pool().await?;
+        sqlx::query(
+            "UPDATE shelf_items
+             SET item_type = ?1, path = ?2, display_name = ?3, icon_cache_key = ?4, position_x = ?5, position_y = ?6, group_id = ?7, last_used = ?8
+             WHERE id = ?9",
+        )
+        .bind(match item.item_type {
+            ItemType::File => "file",
+            ItemType::Folder => "folder",
+            ItemType::App => "app",
+            ItemType::Url => "url",
+        })
+        .bind(&item.path)
+        .bind(&item.display_name)
+        .bind(&item.icon_cache_key)
+        .bind(item.position.x)
+        .bind(item.position.y)
+        .bind(&item.group_id)
+        .bind(&item.last_used)
+        .bind(&item.id)
+        .execute(pool)
+        .await
+        .map_err(|e| e.to_string())?;
+
+        let row = sqlx::query(
+            "SELECT id, item_type, path, display_name, icon_cache_key, position_x, position_y, group_id, created_at, last_used
+             FROM shelf_items WHERE id = ?1",
+        )
+        .bind(&item.id)
+        .fetch_one(pool)
+        .await
+        .map_err(|e| e.to_string())?;
+
+        Self::row_to_item(&row)
+    }
+
+    pub async fn reorder_items(ordered_ids: Vec<String>) -> Result<(), String> {
+        let pool = Self::pool().await?;
+        let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
+        for (index, id) in ordered_ids.iter().enumerate() {
+            sqlx::query("UPDATE shelf_items SET position_x = ?1, position_y = 0.0 WHERE id = ?2")
+                .bind(index as f64)
+                .bind(id)
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
+        }
+        tx.commit().await.map_err(|e| e.to_string())?;
+        Ok(())
+    }
+
     pub async fn get_all_groups() -> Result<Vec<ItemGroup>, String> {
-        info!("ShelfStore: get_all_groups (stub — Phase 2)");
-        Ok(vec![])
+        let pool = Self::pool().await?;
+        let rows = sqlx::query(
+            "SELECT id, name, color, position_x, position_y
+             FROM item_groups
+             ORDER BY position_x ASC, position_y ASC",
+        )
+        .fetch_all(pool)
+        .await
+        .map_err(|e| e.to_string())?;
+        rows.iter().map(Self::row_to_group).collect()
     }
 
-    /// Create a new item group.
-    pub async fn create_group(_group: ItemGroup) -> Result<ItemGroup, String> {
-        Err("ShelfStore: create_group not implemented (Phase 2)".into())
+    pub async fn create_group(group: ItemGroup) -> Result<ItemGroup, String> {
+        let pool = Self::pool().await?;
+        sqlx::query(
+            "INSERT INTO item_groups (id, name, color, position_x, position_y)
+             VALUES (?1, ?2, ?3, ?4, ?5)",
+        )
+        .bind(&group.id)
+        .bind(&group.name)
+        .bind(&group.color)
+        .bind(group.position.x)
+        .bind(group.position.y)
+        .execute(pool)
+        .await
+        .map_err(|e| e.to_string())?;
+        Ok(group)
     }
 
-    /// Delete a group and ungroup its items.
-    pub async fn delete_group(_id: &str) -> Result<(), String> {
-        Err("ShelfStore: delete_group not implemented (Phase 2)".into())
+    pub async fn update_group(group: &ItemGroup) -> Result<(), String> {
+        let pool = Self::pool().await?;
+        sqlx::query(
+            "UPDATE item_groups SET name = ?1, color = ?2, position_x = ?3, position_y = ?4 WHERE id = ?5",
+        )
+        .bind(&group.name)
+        .bind(&group.color)
+        .bind(group.position.x)
+        .bind(group.position.y)
+        .bind(&group.id)
+        .execute(pool)
+        .await
+        .map_err(|e| e.to_string())?;
+        Ok(())
+    }
+
+    pub async fn delete_group(id: &str) -> Result<(), String> {
+        let pool = Self::pool().await?;
+        sqlx::query("DELETE FROM item_groups WHERE id = ?1")
+            .bind(id)
+            .execute(pool)
+            .await
+            .map_err(|e| e.to_string())?;
+        Ok(())
+    }
+
+    pub fn build_item_from_inputs(path: String, item_type: ItemType) -> ShelfItem {
+        let display_name = std::path::Path::new(&path)
+            .file_name()
+            .and_then(|s| s.to_str())
+            .map(|s| s.to_string())
+            .filter(|s| !s.is_empty())
+            .unwrap_or_else(|| path.clone());
+
+        ShelfItem {
+            id: Uuid::new_v4().to_string(),
+            item_type,
+            path,
+            display_name,
+            icon_cache_key: String::new(),
+            position: Position { x: 0.0, y: 0.0 },
+            group_id: None,
+            created_at: String::new(),
+            last_used: String::new(),
+        }
     }
 }

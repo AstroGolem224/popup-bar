@@ -17,24 +17,31 @@
     "windows": [
       {
         "title": "Popup Bar",
-        "width": 1920,
-        "height": 300,
+        "width": 640,
+        "height": 72,
         "decorations": false,
         "transparent": true,
         "visible": false,
         "resizable": false,
         "alwaysOnTop": true,
         "skipTaskbar": true,
+        "dragDropEnabled": true,
         "x": 0,
         "y": 0
       }
     ]
   },
+  "bundle": {
+    "icon": [
+      "icons/icon.ico"
+    ],
+    "targets": ["msi", "dmg", "appimage", "deb"]
+  },
   "plugins": {
     "sql": {
-      "preload": {
-        "db": "sqlite:popup-bar.db"
-      }
+      "preload": [
+        "sqlite:popup-bar.db"
+      ]
     },
     "shell": {
       "open": true

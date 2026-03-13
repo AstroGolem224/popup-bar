@@ -1,8 +1,32 @@
-/* Glassmorphism utility classes
+/* Glassmorphism utility classes and shelf-bar platform tuning
  *
  * Uses CSS custom properties for runtime configurability.
- * Blur + tint via backdrop-filter with border highlight.
+ * Body gets .platform-windows | .platform-macos | .platform-linux from get_platform_info().
  */
+
+/* Default (and Linux) */
+:root {
+  --shelf-bar-bg: rgba(15, 15, 20, 0.75);
+  --shelf-bar-blur: blur(20px) saturate(180%);
+  --shelf-bar-border: 1px solid rgba(255, 255, 255, 0.12);
+  --shelf-bar-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+.platform-macos .shelf-bar {
+  --shelf-bar-bg: rgba(30, 30, 35, 0.3);
+  --shelf-bar-blur: blur(4px);
+}
+
+.platform-windows .shelf-bar {
+  --shelf-bar-bg: rgba(20, 20, 25, 0.45);
+  --shelf-bar-blur: blur(16px) saturate(150%);
+}
+
+.platform-linux .shelf-bar {
+  --shelf-bar-bg: rgba(18, 18, 24, 0.85);
+  --shelf-bar-blur: blur(20px) saturate(180%);
+}
+
 .glass {
   --glass-blur: 20px;
   --glass-tint: rgba(255, 255, 255, 0.08);
@@ -16,13 +40,11 @@
   box-shadow: 0 8px 32px var(--glass-shadow);
 }
 
-/* Lighter variant for nested elements */
 .glass--light {
   --glass-tint: rgba(255, 255, 255, 0.12);
   --glass-border: rgba(255, 255, 255, 0.2);
 }
 
-/* Darker variant for contrast */
 .glass--dark {
   --glass-tint: rgba(0, 0, 0, 0.3);
   --glass-border: rgba(255, 255, 255, 0.1);

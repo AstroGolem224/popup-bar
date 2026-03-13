@@ -25,13 +25,13 @@
   }
 }
 
-/* Applied via useHotzoneState toggle */
+/* Duration from CSS variable (set from settings.animationSpeed in ShelfBar) */
 .shelf-bar--visible {
-  animation: slide-down 220ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: slide-down var(--shelf-bar-duration-show, 220ms) cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 .shelf-bar--hidden {
-  animation: slide-up 180ms cubic-bezier(0.7, 0, 0.84, 0) forwards;
+  animation: slide-up var(--shelf-bar-duration-hide, 180ms) cubic-bezier(0.7, 0, 0.84, 0) forwards;
 }
 
 /* Subtle fade for shelf items appearing */

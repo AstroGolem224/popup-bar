@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use log::info;
 
 /// Window display state.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum WindowState {
     /// Window is not visible and not rendering.
     Hidden,
@@ -18,6 +18,22 @@ pub enum WindowState {
     Visible,
     /// Window is animating out of view.
     Hiding,
+}
+
+/// Errors for invalid window state transitions.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum WindowStateError {
+    InvalidTransition { from: WindowState, action: &'static str },
+}
+
+impl std::fmt::Display for WindowStateError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::InvalidTransition { from, action } => {
+                write!(f, "invalid transition: cannot {action} from state {from:?}")
+            }
+        }
+    }
 }
 
 /// Configuration for the popup bar window.
@@ -44,10 +60,46 @@ impl Default for WindowConfig {
     }
 }
 
+/// Screen rectangle of the bar window. Used so the hotzone does not emit
+/// leave while the cursor is over the bar (user can click icons).
+#[derive(Debug, Clone, Default)]
+pub struct BarRect {
+    pub x: i32,
+    pub y: i32,
+    pub width: u32,
+    pub height: u32,
+}
+
+impl BarRect {
+    /// Returns true if the point (e.g. cursor) is inside this rect.
+    pub fn contains(&self, px: f64, py: f64) -> bool {
+        if self.width == 0 || self.height == 0 {
+            return false;
+        }
+        let px = px as i32;
+        let py = py as i32;
+        px >= self.x && px < self.x + self.width as i32 && py >= self.y && py < self.y + self.height as i32
+    }
+}
+
 /// Manages the popup bar window state and transitions.
 pub struct PopupWindowManager {
     state: WindowState,
     config: WindowConfig,
+    next_transition_token: u64,
+    pending_transition: Option<PendingTransition>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum TransitionKind {
+    Show,
+    Hide,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct PendingTransition {
+    kind: TransitionKind,
+    token: u64,
 }
 
 impl PopupWindowManager {
@@ -56,23 +108,113 @@ impl PopupWindowManager {
         Self {
             state: WindowState::Hidden,
             config,
+            next_transition_token: 1,
+            pending_transition: None,
         }
     }
 
-    /// Slide the popup bar down into view.
-    /// Phase 1: Triggers CSS animation + window show.
-    pub fn show(&mut self) -> Result<(), String> {
-        info!("WindowManager: show requested (stub — Phase 1)");
-        self.state = WindowState::Visible;
-        Ok(())
+    /// Request a transition toward visible state.
+    ///
+    /// Allowed:
+    /// - Hidden -> Showing
+    /// - Hiding -> Showing (interrupt hide)
+    /// - Showing -> Showing (idempotent)
+    /// - Visible -> Visible (idempotent)
+    pub fn request_show(&mut self) -> Result<Option<u64>, WindowStateError> {
+        match self.state {
+            WindowState::Hidden | WindowState::Hiding => {
+                self.state = WindowState::Showing;
+                let token = self.allocate_transition_token();
+                self.pending_transition = Some(PendingTransition {
+                    kind: TransitionKind::Show,
+                    token,
+                });
+                Ok(Some(token))
+            }
+            WindowState::Showing | WindowState::Visible => {
+                // idempotent
+                Ok(self.pending_token_for(TransitionKind::Show))
+            }
+        }
     }
 
-    /// Slide the popup bar up out of view.
-    /// Phase 1: Triggers CSS animation + window hide after animation ends.
-    pub fn hide(&mut self) -> Result<(), String> {
-        info!("WindowManager: hide requested (stub — Phase 1)");
-        self.state = WindowState::Hidden;
-        Ok(())
+    /// Confirm that the window is now visible.
+    ///
+    /// Returns:
+    /// - `Ok(true)` when the token matched and transition was applied
+    /// - `Ok(false)` when token was stale/outdated and ignored
+    pub fn confirm_shown(&mut self, token: u64) -> Result<bool, WindowStateError> {
+        let Some(pending) = self.pending_transition else {
+            return Ok(false);
+        };
+
+        if pending.kind != TransitionKind::Show || pending.token != token {
+            return Ok(false);
+        }
+
+        match self.state {
+            WindowState::Showing | WindowState::Visible => {
+                self.state = WindowState::Visible;
+                self.pending_transition = None;
+                Ok(true)
+            }
+            _ => Err(WindowStateError::InvalidTransition {
+                from: self.state.clone(),
+                action: "confirm shown",
+            }),
+        }
+    }
+
+    /// Request a transition toward hidden state.
+    ///
+    /// Allowed:
+    /// - Visible -> Hiding
+    /// - Showing -> Hiding (interrupt show)
+    /// - Hiding -> Hiding (idempotent)
+    /// - Hidden -> Hidden (idempotent)
+    pub fn request_hide(&mut self) -> Result<Option<u64>, WindowStateError> {
+        match self.state {
+            WindowState::Visible | WindowState::Showing => {
+                self.state = WindowState::Hiding;
+                let token = self.allocate_transition_token();
+                self.pending_transition = Some(PendingTransition {
+                    kind: TransitionKind::Hide,
+                    token,
+                });
+                Ok(Some(token))
+            }
+            WindowState::Hiding | WindowState::Hidden => {
+                // idempotent
+                Ok(self.pending_token_for(TransitionKind::Hide))
+            }
+        }
+    }
+
+    /// Confirm that the window is now hidden.
+    ///
+    /// Returns:
+    /// - `Ok(true)` when the token matched and transition was applied
+    /// - `Ok(false)` when token was stale/outdated and ignored
+    pub fn confirm_hidden(&mut self, token: u64) -> Result<bool, WindowStateError> {
+        let Some(pending) = self.pending_transition else {
+            return Ok(false);
+        };
+
+        if pending.kind != TransitionKind::Hide || pending.token != token {
+            return Ok(false);
+        }
+
+        match self.state {
+            WindowState::Hiding | WindowState::Hidden => {
+                self.state = WindowState::Hidden;
+                self.pending_transition = None;
+                Ok(true)
+            }
+            _ => Err(WindowStateError::InvalidTransition {
+                from: self.state.clone(),
+                action: "confirm hidden",
+            }),
+        }
     }
 
     /// Reposition window to a specific monitor.
@@ -93,5 +235,87 @@ impl PopupWindowManager {
     /// Get current window state.
     pub fn state(&self) -> &WindowState {
         &self.state
+    }
+
+    fn allocate_transition_token(&mut self) -> u64 {
+        let token = self.next_transition_token;
+        self.next_transition_token = self.next_transition_token.saturating_add(1);
+        token
+    }
+
+    fn pending_token_for(&self, kind: TransitionKind) -> Option<u64> {
+        self.pending_transition
+            .filter(|pending| pending.kind == kind)
+            .map(|pending| pending.token)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{PopupWindowManager, WindowConfig, WindowState, WindowStateError};
+
+    #[test]
+    fn hidden_to_visible_path_is_valid() {
+        let mut manager = PopupWindowManager::new(WindowConfig::default());
+        assert_eq!(manager.state(), &WindowState::Hidden);
+
+        let show_token = manager
+            .request_show()
+            .expect("request_show should succeed")
+            .expect("show should produce a transition token");
+        assert_eq!(manager.state(), &WindowState::Showing);
+
+        assert!(
+            manager
+                .confirm_shown(show_token)
+                .expect("confirm_shown should succeed")
+        );
+        assert_eq!(manager.state(), &WindowState::Visible);
+    }
+
+    #[test]
+    fn visible_to_hidden_path_is_valid() {
+        let mut manager = PopupWindowManager::new(WindowConfig::default());
+        let show_token = manager.request_show().unwrap().unwrap();
+        manager.confirm_shown(show_token).unwrap();
+
+        let hide_token = manager
+            .request_hide()
+            .expect("request_hide should succeed")
+            .expect("hide should produce a transition token");
+        assert_eq!(manager.state(), &WindowState::Hiding);
+
+        assert!(
+            manager
+                .confirm_hidden(hide_token)
+                .expect("confirm_hidden should succeed")
+        );
+        assert_eq!(manager.state(), &WindowState::Hidden);
+    }
+
+    #[test]
+    fn cannot_confirm_hidden_from_visible() {
+        let mut manager = PopupWindowManager::new(WindowConfig::default());
+        let show_token = manager.request_show().unwrap().unwrap();
+        manager.confirm_shown(show_token).unwrap();
+
+        assert_eq!(
+            manager
+                .confirm_hidden(999)
+                .expect("stale token should be ignored, not errored"),
+            false
+        );
+    }
+
+    #[test]
+    fn stale_show_completion_is_ignored_after_hide_request() {
+        let mut manager = PopupWindowManager::new(WindowConfig::default());
+
+        let show_token = manager.request_show().unwrap().unwrap();
+        let hide_token = manager.request_hide().unwrap().unwrap();
+
+        assert_eq!(manager.confirm_shown(show_token).unwrap(), false);
+        assert_eq!(manager.confirm_hidden(hide_token).unwrap(), true);
+        assert_eq!(manager.state(), &WindowState::Hidden);
     }
 }

@@ -1,8 +1,8 @@
-/* ShelfBar — main popup bar container */
+/* ShelfBar — rechteckige Leiste */
 .shelf-bar {
+  position: relative;
   width: 100%;
   height: 100%;
-  border-radius: 0 0 12px 12px;
   padding: 16px 24px;
   display: flex;
   align-items: center;
@@ -24,4 +24,60 @@
   font-weight: 400;
   letter-spacing: 0.5px;
   user-select: none;
+}
+
+.shelf-bar__right-actions {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  transform: translateY(-50%);
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.shelf-bar__exit-btn {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 2px;
+}
+
+.shelf-bar__exit-btn:hover {
+  color: rgba(255, 200, 200, 0.95);
+}
+
+.shelf-bar__settings-btn {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 18px;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.shelf-bar__settings-btn:hover {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.shelf-bar__backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: transparent;
+}
+
+.shelf-bar__settings-wrap {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 300px;
+  z-index: 101;
+  pointer-events: auto;
 }

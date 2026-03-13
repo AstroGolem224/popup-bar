@@ -9,6 +9,7 @@
 
 ## Inhaltsverzeichnis
 
+- [3.0 Status-Snapshot (laufend gepflegt)](#30-status-snapshot-laufend-gepflegt)
 - [3.1 Phasen-Roadmap](#31-phasen-roadmap)
 - [3.2 Detailschritte pro Phase](#32-detailschritte-pro-phase)
   - [Phase 0 — Fundament](#phase-0--fundament-woche-12)
@@ -20,6 +21,35 @@
   - [Phase 6 — Testing & Release](#phase-6--testing--release-woche-1516)
 - [3.3 Risiken & Mitigations](#33-risiken--mitigations)
 - [3.4 Meilensteine](#34-meilensteine)
+
+---
+
+## 3.0 Status-Snapshot (laufend gepflegt)
+
+> Konvention fuer Status: `open`, `in progress`, `blocked`, `done`
+
+### Aktive Prioritaeten
+
+| ID | Bereich | Prioritaet | Status | Bezug |
+|---|---|---|---|---|
+| P1-01 | Hotzone Event-Flow (Backend) | P0 | done | Phase 1 / Aufgabe 1.1 |
+| P1-02 | Frontend Event-Wiring (`useHotzoneState`) | P0 | done | Phase 1 / Aufgabe 1.4 |
+| P1-03 | Slide Lifecycle Sync (`show_window`/`hide_window`) | P0 | done | Phase 1 / Aufgabe 1.5 |
+| P1-04 | WindowState Guardrails | P1 | done | Phase 1 / Aufgabe 1.6 |
+| P1-05 | Tests fuer Event-Flow/FSM | P1 | done | Phase 1 / Aufgabe 1.6 (Testabsicherung) |
+| P2-01 | SQLite-Schema & Migration Setup | P0 | done | Phase 2 / Aufgabe 2.1 |
+| P2-02 | Shelf CRUD Commands (Rust) | P0 | done | Phase 2 / Aufgabe 2.3 |
+| P2-03 | `useShelfItems` Backend-Wiring | P0 | done | Phase 2 / Aufgabe 2.4 |
+| P2-04 | ShelfGrid Runtime-Persistenzfluss | P1 | in progress | Phase 2 / Aufgabe 2.5 |
+| P2-05 | Shelf UX: Error-State + Toasts | P1 | done | Phase 2 Restpunkt (Produktreife) |
+| P3-01 | Drop-Path Handling (Datei/Ordner/App/URL) | P0 | in progress | Phase 3 / Aufgabe 3.1-3.3 |
+| P3-02 | Reorder Persistenz (`reorder_shelf_items`) | P0 | in progress | Phase 3 / Aufgabe 3.5 |
+| P4-01 | Icon Resolver + Cache Baseline | P0 | done | Phase 4 / Aufgabe 4.1-4.3 |
+| P4-02 | ShelfItem Icon Rendering + Fallback | P0 | done | Phase 4 / Aufgabe 4.5 |
+| P4-03 | Native Icon Extraction (Win/macOS/Linux) | P0 | done | Phase 4 / Aufgabe 4.1-4.2 |
+| P4-04 | Icon-Cache-Invalidierung (source_path) | P1 | done | Phase 4 / Aufgabe 4.3 |
+| P4-05 | Glassmorphism plattformspezifisch | P1 | done | Phase 4 / Aufgabe 4.4 |
+| DOC-01 | Plan-vs-Code Status Sync pro PR | P0 | done | Prozessregel |
 
 ---
 
@@ -1236,11 +1266,13 @@ Implementiere Hover-, Focus- und Click-Animationen für `ShelfItem`-Kacheln in C
 
 **Ziel:** Eine vollständige Settings-UI erlaubt die Konfiguration aller wichtigen Parameter. Autostart ist implementiert und Multi-Monitor-Szenarien werden korrekt behandelt.
 
+**Status (Stand Code):** 5.1–5.4 done. 5.5 (Performance) open. ConfigManager nutzt `settings`-Tabelle (key `app`). SettingsPanel über Zahnrad in der Bar, Backdrop-Click zum Schließen. Autostart via `tauri-plugin-autostart`; Multi-Monitor: Fenster wird bei `show_window` auf Primärmonitor positioniert (Breite = Monitor, Höhe 72px). Cursor-Monitor bei `primary_only=false` noch nicht implementiert (aktuell immer Primärmonitor).
+
 ---
 
 #### Aufgaben
 
-**Aufgabe 5.1 — `AppSettings`-Datenmodell und `ConfigManager`**
+**Aufgabe 5.1 — `AppSettings`-Datenmodell und `ConfigManager`** — **done**
 
 Implementiere `AppSettings` in `modules/config.rs` mit Default-Werten. Alle Einstellungen werden via `settings`-Tabelle in SQLite persistiert (Key-Value-Store).
 
@@ -1296,7 +1328,7 @@ impl Default for AppSettings {
 
 ---
 
-**Aufgabe 5.2 — `SettingsPanel`-Komponente**
+**Aufgabe 5.2 — `SettingsPanel`-Komponente** — **done**
 
 Implementiere `src/components/SettingsPanel/SettingsPanel.tsx` als React-Komponente, die über ein Zahnrad-Icon in der Bar geöffnet wird. Nutze `useSettingsStore` für reaktiven State.
 
@@ -1359,7 +1391,7 @@ export function SettingsPanel() {
 
 ---
 
-**Aufgabe 5.3 — Autostart-Integration**
+**Aufgabe 5.3 — Autostart-Integration** — **done**
 
 Implementiere Autostart via `tauri-plugin-autostart` (Windows Registry `HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Run`, macOS Launch Agent plist, Linux `.config/autostart/`). Verknüpfe mit `launch_at_login`-Setting.
 
@@ -1388,7 +1420,7 @@ pub async fn set_launch_at_login(
 
 ---
 
-**Aufgabe 5.4 — Multi-Monitor-Unterstützung**
+**Aufgabe 5.4 — Multi-Monitor-Unterstützung** — **done**
 
 Implementiere Multi-Monitor-Handling in `modules/window_manager.rs`: Erkenne alle angeschlossenen Monitore via `window.available_monitors()`. Konfigurierbare Option `primary_monitor_only` (Standard: `true`). Positioniere die Bar auf dem Monitor, auf dem der Cursor zuletzt war.
 
