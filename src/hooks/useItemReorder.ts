@@ -15,6 +15,8 @@ export function useItemReorder() {
       return;
     }
 
+    // PERFORMANCE OPTIMIZATION: Dynamically fetch current state to prevent `items` dependency.
+    // This stabilizes the callback reference, preventing O(N) child re-renders.
     const { items, reorderItems, setError } = useShelfStore.getState();
 
     const currentIds = items.map((item) => item.id);
