@@ -1,0 +1,3 @@
+## 2024-05-24 - React Re-render Bottleneck on Hover/Visibility
+**Learning:** React components that depend on high-frequency state changes (like mouse enter/leave toggling visibility classes) will cause deep re-render trees if child components aren't properly memoized with stable callback props. Toggling `isVisible` caused *all* `ShelfItem` instances to re-render because callbacks weren't stable.
+**Action:** Always wrap list items in `React.memo` and ensure that all callback props (especially those interacting with stores or async actions) are stabilized with `useCallback` or by reading the store dynamically via `store.getState()` instead of reacting to it.
