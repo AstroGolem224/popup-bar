@@ -3,7 +3,9 @@ src-tauri/target/
 
 # Node
 node_modules/
-dist/
+dist/*
+!dist/.gitkeep
+!src-tauri/icons/icon.ico
 
 # Environment
 .env

@@ -77,6 +77,7 @@ export function ShelfItem({
       className={`shelf-item shelf-item--${item.itemType}`}
       title={item.displayName}
       tabIndex={0}
+      role="button"
       draggable
       onClick={() => {
         void handleActivate();
