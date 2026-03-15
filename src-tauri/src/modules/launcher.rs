@@ -7,9 +7,10 @@
 
 use super::shelf_store::ItemType;
 use log::info;
+#[cfg(target_os = "windows")]
 use std::process::Command;
 use tauri::AppHandle;
-use tauri_plugin_shell::ShellExt;
+use tauri_plugin_opener::OpenerExt;
 
 /// Launches an item based on its type and path.
 pub struct Launcher;
@@ -48,8 +49,8 @@ impl Launcher {
         }
 
         #[cfg(not(target_os = "windows"))]
-        app.shell()
-            .open(path.to_string(), None)
+        app.opener()
+            .open_path(path, None::<&str>)
             .map_err(|e| format!("Launcher: open failed: {e}"))
     }
 
@@ -73,8 +74,8 @@ impl Launcher {
             return Err("Launcher: invalid target path".into());
         }
 
-        app.shell()
-            .open(path.to_string(), None)
+        app.opener()
+            .reveal_in_folder(path)
             .map_err(|e| format!("Launcher: reveal_in_file_manager failed: {e}"))
     }
 
