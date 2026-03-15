@@ -4,9 +4,6 @@ import { reorderShelfItems } from "../utils/tauri-bridge";
 
 export function useItemReorder() {
   const draggedIdRef = useRef<string | null>(null);
-  const items = useShelfStore((state) => state.items);
-  const reorderItems = useShelfStore((state) => state.reorderItems);
-  const setError = useShelfStore((state) => state.setError);
 
   const onDragStart = useCallback((itemId: string) => {
     draggedIdRef.current = itemId;
@@ -17,6 +14,10 @@ export function useItemReorder() {
     if (!draggedId || draggedId === targetId) {
       return;
     }
+
+    // PERFORMANCE OPTIMIZATION: Dynamically fetch current state to prevent `items` dependency.
+    // This stabilizes the callback reference, preventing O(N) child re-renders.
+    const { items, reorderItems, setError } = useShelfStore.getState();
 
     const currentIds = items.map((item) => item.id);
     const fromIndex = currentIds.indexOf(draggedId);
@@ -38,7 +39,7 @@ export function useItemReorder() {
       reorderItems(currentIds);
       setError("reihenfolge konnte nicht gespeichert werden");
     }
-  }, [items, reorderItems, setError]);
+  }, []);
 
   return {
     onDragStart,

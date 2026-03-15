@@ -6,7 +6,7 @@
  *
  * Uses Zustand as local cache and synchronizes with Tauri commands.
  */
-import { useEffect } from "react";
+import { useEffect, useCallback } from "react";
 import type { ShelfItem, ItemGroup } from "../types/shelf";
 import {
   addShelfItem,
@@ -73,71 +73,83 @@ export function useShelfItems(): UseShelfItemsReturn {
     };
   }, [setError, setItems]);
 
+  const addItem = useCallback(async (path: string, itemType: string) => {
+    try {
+      const item = await addShelfItem(path, itemType as ItemType);
+      storeAddItem(item);
+    } catch (error) {
+      console.warn("add_shelf_item failed", error);
+      setError("item konnte nicht angelegt werden");
+    }
+  }, [storeAddItem, setError]);
+
+  const removeItem = useCallback(async (id: string) => {
+    try {
+      await removeShelfItem(id);
+      storeRemoveItem(id);
+    } catch (error) {
+      console.warn("remove_shelf_item failed", error);
+      setError("item konnte nicht geloescht werden");
+    }
+  }, [storeRemoveItem, setError]);
+
+  const updateItem = useCallback(async (item: ShelfItem) => {
+    try {
+      const updated = await updateShelfItem(item);
+      storeUpdateItem(updated);
+    } catch (error) {
+      console.warn("update_shelf_item failed", error);
+      setError("item konnte nicht gespeichert werden");
+    }
+  }, [storeUpdateItem, setError]);
+
+  const addGroup = useCallback(async (name: string, color?: string) => {
+    try {
+      const group = await createItemGroup(name, color);
+      useShelfStore.setState((state) => ({
+        groups: [...state.groups, group],
+      }));
+    } catch (error) {
+      console.warn("create_item_group failed", error);
+      setError("gruppe konnte nicht angelegt werden");
+    }
+  }, [setError]);
+
+  const updateGroup = useCallback(async (group: ItemGroup) => {
+    try {
+      const updated = await updateItemGroup(group);
+      useShelfStore.setState((state) => ({
+        groups: state.groups.map((g) => (g.id === updated.id ? updated : g)),
+      }));
+    } catch (error) {
+      console.warn("update_item_group failed", error);
+      setError("gruppe konnte nicht gespeichert werden");
+    }
+  }, [setError]);
+
+  const removeGroup = useCallback(async (id: string) => {
+    try {
+      await deleteItemGroup(id);
+      useShelfStore.setState((state) => ({
+        groups: state.groups.filter((g) => g.id !== id),
+        items: state.items.map((item) =>
+          item.groupId === id ? { ...item, groupId: undefined } : item,
+        ),
+      }));
+    } catch (error) {
+      console.warn("delete_item_group failed", error);
+      setError("gruppe konnte nicht geloescht werden");
+    }
+  }, [setError]);
+
   return {
     items,
     groups,
-    addItem: async (path: string, itemType: string) => {
-      try {
-        const item = await addShelfItem(path, itemType as ItemType);
-        storeAddItem(item);
-      } catch (error) {
-        console.warn("add_shelf_item failed", error);
-        setError("item konnte nicht angelegt werden");
-      }
-    },
-    removeItem: async (id: string) => {
-      try {
-        await removeShelfItem(id);
-        storeRemoveItem(id);
-      } catch (error) {
-        console.warn("remove_shelf_item failed", error);
-        setError("item konnte nicht geloescht werden");
-      }
-    },
-    updateItem: async (item: ShelfItem) => {
-      try {
-        const updated = await updateShelfItem(item);
-        storeUpdateItem(updated);
-      } catch (error) {
-        console.warn("update_shelf_item failed", error);
-        setError("item konnte nicht gespeichert werden");
-      }
-    },
-    addGroup: async (name: string, color?: string) => {
-      try {
-        const group = await createItemGroup(name, color);
-        useShelfStore.setState((state) => ({
-          groups: [...state.groups, group],
-        }));
-      } catch (error) {
-        console.warn("create_item_group failed", error);
-        setError("gruppe konnte nicht angelegt werden");
-      }
-    },
-    updateGroup: async (group: ItemGroup) => {
-      try {
-        const updated = await updateItemGroup(group);
-        useShelfStore.setState((state) => ({
-          groups: state.groups.map((g) => (g.id === updated.id ? updated : g)),
-        }));
-      } catch (error) {
-        console.warn("update_item_group failed", error);
-        setError("gruppe konnte nicht gespeichert werden");
-      }
-    },
-    removeGroup: async (id: string) => {
-      try {
-        await deleteItemGroup(id);
-        useShelfStore.setState((state) => ({
-          groups: state.groups.filter((g) => g.id !== id),
-          items: state.items.map((item) =>
-            item.groupId === id ? { ...item, groupId: undefined } : item,
-          ),
-        }));
-      } catch (error) {
-        console.warn("delete_item_group failed", error);
-        setError("gruppe konnte nicht geloescht werden");
-      }
-    },
+    addItem,
+    removeItem,
+    updateItem,
+    addGroup,
+    updateGroup,
+    removeGroup,
   };
 }
