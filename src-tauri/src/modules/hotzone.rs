@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 //! Mouse tracking & hotzone detection
 //!
 //! Monitors cursor position and triggers the popup bar when the mouse

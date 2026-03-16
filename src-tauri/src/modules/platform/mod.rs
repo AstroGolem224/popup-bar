@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 //! Platform-specific abstractions
 //!
 //! Defines a common trait for platform-dependent operations and provides

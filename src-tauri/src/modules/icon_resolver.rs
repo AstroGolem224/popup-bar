@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+#![allow(clippy::all)]
 //! Icon extraction & caching
 //!
 //! Extracts icons from files, applications, and URLs using platform-native

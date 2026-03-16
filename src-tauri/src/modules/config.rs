@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 //! Settings management
 //!
 //! Persists and retrieves user preferences via the `settings` SQLite table.

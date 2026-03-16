@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 //! OS-native drag & drop handling
 //!
 //! Manages drag-and-drop interactions for adding items to the shelf,
