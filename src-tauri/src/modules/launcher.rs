@@ -7,6 +7,7 @@
 
 use super::shelf_store::ItemType;
 use log::info;
+#[cfg(target_os = "windows")]
 use std::process::Command;
 use tauri::AppHandle;
 use tauri_plugin_shell::ShellExt;
@@ -48,9 +49,12 @@ impl Launcher {
         }
 
         #[cfg(not(target_os = "windows"))]
-        app.shell()
-            .open(path.to_string(), None)
-            .map_err(|e| format!("Launcher: open failed: {e}"))
+        {
+            #[allow(deprecated)]
+            app.shell()
+                .open(path.to_string(), None)
+                .map_err(|e| format!("Launcher: open failed: {e}"))
+        }
     }
 
     /// Open a file with a specific application.
@@ -73,6 +77,7 @@ impl Launcher {
             return Err("Launcher: invalid target path".into());
         }
 
+        #[allow(deprecated)]
         app.shell()
             .open(path.to_string(), None)
             .map_err(|e| format!("Launcher: reveal_in_file_manager failed: {e}"))
