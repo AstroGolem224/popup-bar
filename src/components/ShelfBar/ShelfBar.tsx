@@ -4,7 +4,7 @@
  * Top-level visual component with glassmorphism background.
  * Contains the ShelfGrid for items and the settings gear.
  */
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { ShelfGrid } from "../ShelfGrid";
 import { SettingsPanel } from "../Settings";
 import { useShelfItems } from "../../hooks/useShelfItems";
@@ -32,6 +32,13 @@ export function ShelfBar({ className, isVisible, onAnimationComplete }: ShelfBar
     ["--shelf-bar-duration-hide" as string]: `${180 / animationSpeed}ms`,
   };
 
+  const handleDeleteItem = useCallback(
+    (id: string) => {
+      void removeItem(id);
+    },
+    [removeItem]
+  );
+
   return (
     <>
       <div
@@ -50,7 +57,7 @@ export function ShelfBar({ className, isVisible, onAnimationComplete }: ShelfBar
             </p>
           </div>
         ) : (
-          <ShelfGrid items={items} onDeleteItem={(id) => void removeItem(id)} />
+          <ShelfGrid items={items} onDeleteItem={handleDeleteItem} />
         )}
         <div className="shelf-bar__right-actions">
           <button

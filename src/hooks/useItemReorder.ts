@@ -4,7 +4,6 @@ import { reorderShelfItems } from "../utils/tauri-bridge";
 
 export function useItemReorder() {
   const draggedIdRef = useRef<string | null>(null);
-  const items = useShelfStore((state) => state.items);
   const reorderItems = useShelfStore((state) => state.reorderItems);
   const setError = useShelfStore((state) => state.setError);
 
@@ -18,7 +17,7 @@ export function useItemReorder() {
       return;
     }
 
-    const currentIds = items.map((item) => item.id);
+    const currentIds = useShelfStore.getState().items.map((item) => item.id);
     const fromIndex = currentIds.indexOf(draggedId);
     const targetIndex = currentIds.indexOf(targetId);
     if (fromIndex < 0 || targetIndex < 0) {
@@ -38,7 +37,7 @@ export function useItemReorder() {
       reorderItems(currentIds);
       setError("reihenfolge konnte nicht gespeichert werden");
     }
-  }, [items, reorderItems, setError]);
+  }, [reorderItems, setError]);
 
   return {
     onDragStart,
