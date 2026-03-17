@@ -76,6 +76,8 @@ export function ShelfItem({
     <div
       className={`shelf-item shelf-item--${item.itemType}`}
       title={item.displayName}
+      aria-label={`${item.displayName} öffnen`}
+      role="button"
       tabIndex={0}
       draggable
       onClick={() => {
@@ -118,12 +120,12 @@ export function ShelfItem({
           <img
             className="shelf-item__icon-img"
             src={iconDataUrl}
-            alt=""
+            alt={`${item.displayName} Icon`}
             draggable={false}
             onError={() => setIconLoadFailed(true)}
           />
         ) : (
-          <span className="shelf-item__icon-fallback">{fallbackIcon}</span>
+          <span className="shelf-item__icon-fallback" aria-hidden="true">{fallbackIcon}</span>
         )}
       </div>
     </div>

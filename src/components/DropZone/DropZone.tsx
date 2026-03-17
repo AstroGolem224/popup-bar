@@ -21,8 +21,10 @@ export function DropZone({ children }: DropZoneProps) {
       onDragOver={onDragOver}
       onDragLeave={onDragLeave}
       onDrop={onDrop}
+      role="region"
+      aria-label="Drop-Zone für Dateien und Ordner"
     >
-      {isDragOver ? <div className="drop-zone__overlay">{dragHint}</div> : null}
+      {isDragOver ? <div className="drop-zone__overlay" aria-live="polite">{dragHint}</div> : null}
       {children}
     </div>
   );
