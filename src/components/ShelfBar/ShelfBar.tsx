@@ -50,7 +50,10 @@ export function ShelfBar({ className, isVisible, onAnimationComplete }: ShelfBar
             </p>
           </div>
         ) : (
-          <ShelfGrid items={items} onDeleteItem={(id) => void removeItem(id)} />
+          /* ⚡ Bolt: Pass `removeItem` as a stable reference.
+             Using an inline arrow function like `(id) => void removeItem(id)`
+             would break memoization in ShelfGrid and force it to re-render. */
+          <ShelfGrid items={items} onDeleteItem={removeItem} />
         )}
         <div className="shelf-bar__right-actions">
           <button

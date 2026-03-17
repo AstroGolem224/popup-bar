@@ -4,7 +4,6 @@ import { reorderShelfItems } from "../utils/tauri-bridge";
 
 export function useItemReorder() {
   const draggedIdRef = useRef<string | null>(null);
-  const items = useShelfStore((state) => state.items);
   const reorderItems = useShelfStore((state) => state.reorderItems);
   const setError = useShelfStore((state) => state.setError);
 
@@ -18,6 +17,10 @@ export function useItemReorder() {
       return;
     }
 
+    // ⚡ Bolt: Read items dynamically from Zustand state rather than subscribing
+    // to state.items. This prevents the hook from re-rendering every time the
+    // shelf items change, keeping the onDropOnItem callback reference stable.
+    const items = useShelfStore.getState().items;
     const currentIds = items.map((item) => item.id);
     const fromIndex = currentIds.indexOf(draggedId);
     const targetIndex = currentIds.indexOf(targetId);
@@ -38,7 +41,7 @@ export function useItemReorder() {
       reorderItems(currentIds);
       setError("reihenfolge konnte nicht gespeichert werden");
     }
-  }, [items, reorderItems, setError]);
+  }, [reorderItems, setError]);
 
   return {
     onDragStart,

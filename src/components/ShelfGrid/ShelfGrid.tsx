@@ -1,3 +1,4 @@
+import React from "react";
 import { ShelfItem as ShelfItemComponent } from "../ShelfItem";
 import type { ShelfItem } from "../../types/shelf";
 import { useItemReorder } from "../../hooks/useItemReorder";
@@ -9,7 +10,10 @@ export interface ShelfGridProps {
   onDeleteItem?: (id: string) => void | Promise<void>;
 }
 
-export function ShelfGrid({ items, onDeleteItem }: ShelfGridProps) {
+// ⚡ Bolt: Wrapped ShelfGrid in React.memo. Together with stabilized callbacks
+// passed from useItemReorder and useShelfItems, this prevents the entire grid
+// and its children from re-rendering whenever the parent ShelfBar updates.
+export const ShelfGrid = React.memo(function ShelfGrid({ items, onDeleteItem }: ShelfGridProps) {
   const { onDragStart, onDropOnItem } = useItemReorder();
 
   return (
@@ -25,4 +29,4 @@ export function ShelfGrid({ items, onDeleteItem }: ShelfGridProps) {
       ))}
     </div>
   );
-}
+});

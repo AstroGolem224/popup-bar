@@ -6,7 +6,7 @@
  * Icons loaded via get_icon_data (base64) to avoid asset protocol scope.
  */
 import type { ShelfItem as ShelfItemType } from "../../types/shelf";
-import { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   getIconDataUrl,
   openShelfItemViaLauncher,
@@ -28,7 +28,10 @@ export interface ShelfItemProps {
   onDelete?: (id: string) => void | Promise<void>;
 }
 
-export function ShelfItem({
+// ⚡ Bolt: Wrapped ShelfItem in React.memo to prevent unnecessary re-renders.
+// Since ShelfBar frequently toggles visibility (triggering renders), memoizing
+// individual items ensures they only re-render if their props (item data) change.
+export const ShelfItem = React.memo(function ShelfItem({
   item,
   onDoubleClick,
   onDragStartItem,
@@ -128,4 +131,4 @@ export function ShelfItem({
       </div>
     </div>
   );
-}
+});
