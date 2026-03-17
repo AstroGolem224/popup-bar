@@ -1,3 +1,6 @@
+#![allow(dead_code)]
+#![allow(unused_imports)]
+#![allow(unused_variables)]
 //! Window position, size, and transparency management
 //!
 //! Controls the popup bar window lifecycle including slide-down animations,

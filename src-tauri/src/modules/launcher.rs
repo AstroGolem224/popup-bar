@@ -1,3 +1,6 @@
+#![allow(dead_code)]
+#![allow(unused_imports)]
+#![allow(unused_variables)]
 //! File, application, and URL opening
 //!
 //! Launches shelf items using the appropriate system handler based on

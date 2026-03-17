@@ -1,3 +1,6 @@
+#![allow(dead_code)]
+#![allow(unused_imports)]
+#![allow(unused_variables)]
 //! Icon extraction & caching
 //!
 //! Extracts icons from files, applications, and URLs using platform-native

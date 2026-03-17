@@ -120,7 +120,7 @@ export function ShelfItem({
           <img
             className="shelf-item__icon-img"
             src={iconDataUrl}
-            alt={`${item.displayName} Icon`}
+            alt={item.displayName}
             draggable={false}
             onError={() => setIconLoadFailed(true)}
           />

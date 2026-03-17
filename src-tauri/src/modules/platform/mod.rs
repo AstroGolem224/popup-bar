@@ -1,3 +1,6 @@
+#![allow(dead_code)]
+#![allow(unused_imports)]
+#![allow(unused_variables)]
 //! Platform-specific abstractions
 //!
 //! Defines a common trait for platform-dependent operations and provides
