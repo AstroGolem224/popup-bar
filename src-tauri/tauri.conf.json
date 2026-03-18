@@ -33,9 +33,15 @@
   },
   "bundle": {
     "icon": [
+      "icons/icon.png",
       "icons/icon.ico"
     ],
-    "targets": ["msi", "dmg", "appimage", "deb"]
+    "targets": [
+      "msi",
+      "dmg",
+      "appimage",
+      "deb"
+    ]
   },
   "plugins": {
     "sql": {
