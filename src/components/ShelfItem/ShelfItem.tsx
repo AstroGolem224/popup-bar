@@ -1,8 +1,8 @@
 /**
  * ShelfItem — A single item on the shelf (file, folder, app, or URL).
  *
- * Displays the item icon and label. Supports double-click to launch
- * and drag to reorder (Phase 3).
+ * Displays the item icon and label. Supports click to launch
+ * and mouse-based reordering (avoids HTML5 DnD / Tauri conflicts).
  * Icons loaded via get_icon_data (base64) to avoid asset protocol scope.
  */
 import type { ShelfItem as ShelfItemType } from "../../types/shelf";
@@ -18,21 +18,21 @@ const ACTIVATE_DEBOUNCE_MS = 400;
 export interface ShelfItemProps {
   /** The shelf item data to render. */
   item: ShelfItemType;
-  /** Callback when item is double-clicked (launch). */
-  onDoubleClick?: (item: ShelfItemType) => void;
-  /** Callback when dragging starts. */
-  onDragStartItem?: (id: string) => void;
-  /** Callback when another item is dropped onto this item. */
-  onDropOnItem?: (id: string) => void | Promise<void>;
-  /** Callback when delete (X) is clicked. Preferred over drag-to-trash on Windows (HTML5 drag broken with Tauri dragDropEnabled). */
+  /** Whether this item is currently being dragged. */
+  isDragging?: boolean;
+  /** Whether another item is being dragged over this one. */
+  isDragOver?: boolean;
+  /** Callback when mouse starts reorder drag. */
+  onReorderMouseDown?: (id: string, event: React.MouseEvent) => void;
+  /** Callback when delete (X) is clicked. */
   onDelete?: (id: string) => void | Promise<void>;
 }
 
 export function ShelfItem({
   item,
-  onDoubleClick,
-  onDragStartItem,
-  onDropOnItem,
+  isDragging = false,
+  isDragOver = false,
+  onReorderMouseDown,
   onDelete,
 }: ShelfItemProps) {
   const [iconLoadFailed, setIconLoadFailed] = useState(false);
@@ -57,10 +57,6 @@ export function ShelfItem({
         : "📄";
 
   const handleActivate = async () => {
-    if (onDoubleClick) {
-      onDoubleClick(item);
-      return;
-    }
     const now = Date.now();
     if (now - lastActivateRef.current < ACTIVATE_DEBOUNCE_MS) return;
     lastActivateRef.current = now;
@@ -72,12 +68,19 @@ export function ShelfItem({
     }
   };
 
+  const classNames = [
+    "shelf-item",
+    `shelf-item--${item.itemType}`,
+    isDragging ? "shelf-item--dragging" : "",
+    isDragOver ? "shelf-item--drag-over" : "",
+  ].filter(Boolean).join(" ");
+
   return (
     <div
-      className={`shelf-item shelf-item--${item.itemType}`}
+      className={classNames}
+      data-shelf-item-id={item.id}
       title={item.displayName}
       tabIndex={0}
-      draggable
       onClick={() => {
         void handleActivate();
       }}
@@ -87,15 +90,8 @@ export function ShelfItem({
           void handleActivate();
         }
       }}
-      onDragStart={(e) => {
-        onDragStartItem?.(item.id);
-        e.dataTransfer.setData("application/x-popup-bar-item-id", item.id);
-        e.dataTransfer.setData("text/plain", item.id);
-        e.dataTransfer.effectAllowed = "move";
-      }}
-      onDragOver={(event) => event.preventDefault()}
-      onDrop={() => {
-        void onDropOnItem?.(item.id);
+      onMouseDown={(e) => {
+        onReorderMouseDown?.(item.id, e);
       }}
     >
       {onDelete ? (
@@ -107,6 +103,7 @@ export function ShelfItem({
             e.preventDefault();
             void onDelete(item.id);
           }}
+          onMouseDown={(e) => e.stopPropagation()}
           aria-label="Item entfernen"
           title="Entfernen"
         >

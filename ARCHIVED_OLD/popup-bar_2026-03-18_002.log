@@ -1,0 +1,23 @@
+[2026-03-18 12:38:17.121 INFO popup_bar_lib] Starting Popup Bar v0.1.0
+[2026-03-18 12:38:17.121 INFO popup_bar_lib] Log file: C:\Users\matth\OneDrive\Dokumente\GitHub\popup-bar\popup-bar\popup-bar_2026-03-18_002.log
+[2026-03-18 12:38:18.126 INFO popup_bar_lib::modules::hotzone] HotzoneTracker: starting
+[2026-03-18 12:38:18.126 INFO popup_bar_lib] Hotzone tracker initialized
+[2026-03-18 12:38:18.309 INFO popup_bar_lib::commands::shelf_commands] [shelf-cmd] get_shelf_items container=Some("main")
+[2026-03-18 12:38:18.309 INFO popup_bar_lib::commands::shelf_commands] [shelf-cmd] get_shelf_items returning 6 items
+[2026-03-18 12:38:18.314 INFO popup_bar_lib::commands::shelf_commands] [shelf-cmd] get_shelf_items container=Some("main")
+[2026-03-18 12:38:18.315 INFO popup_bar_lib::commands::shelf_commands] [shelf-cmd] get_shelf_items returning 6 items
+[2026-03-18 12:38:49.215 INFO popup_bar_lib::commands::shelf_commands] [shelf-cmd] get_shelf_items container=Some("main")
+[2026-03-18 12:38:49.215 INFO popup_bar_lib::commands::shelf_commands] [shelf-cmd] get_shelf_items returning 6 items
+[2026-03-18 12:38:49.218 INFO popup_bar_lib::commands::shelf_commands] [shelf-cmd] get_shelf_items container=Some("main")
+[2026-03-18 12:38:49.218 INFO popup_bar_lib::commands::shelf_commands] [shelf-cmd] get_shelf_items returning 6 items
+[2026-03-18 12:38:52.476 INFO popup_bar_lib::modules::config] ConfigManager: settings saved
+[2026-03-18 12:38:52.476 INFO popup_bar_lib::commands::settings_commands] [settings] update_settings called: hotzone_size=9
+[2026-03-18 12:38:52.476 INFO popup_bar_lib::commands::settings_commands] [settings] Updating hotzone tracker config...
+[2026-03-18 12:38:52.476 INFO popup_bar_lib::modules::hotzone] [hotzone] update_config called: size=9
+[2026-03-18 12:38:52.476 INFO popup_bar_lib::modules::hotzone] [hotzone] config updated successfully
+[2026-03-18 12:38:54.594 INFO popup_bar_lib::modules::config] ConfigManager: settings saved
+[2026-03-18 12:39:07.733 INFO popup_bar_lib::modules::config] ConfigManager: settings saved
+[2026-03-18 12:39:19.141 INFO popup_bar_lib::commands::shelf_commands] [shelf-cmd] get_shelf_items container=Some("main")
+[2026-03-18 12:39:19.141 INFO popup_bar_lib::commands::shelf_commands] [shelf-cmd] get_shelf_items returning 6 items
+[2026-03-18 12:39:19.147 INFO popup_bar_lib::commands::shelf_commands] [shelf-cmd] get_shelf_items container=Some("main")
+[2026-03-18 12:39:19.147 INFO popup_bar_lib::commands::shelf_commands] [shelf-cmd] get_shelf_items returning 6 items

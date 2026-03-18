@@ -9,7 +9,9 @@ Always‑on‑top, Hotzone‑Trigger am oberen Bildschirmrand, Shelf für Dateie
 - Persistente Shelf‑Items (SQLite)
 - Drag & Drop & Reorder
 - Native Icon‑Extraktion (Win/macOS/Linux)
-- Settings‑Panel (Hotzone, Leistenbreite & -höhe, Animation, Autostart, Multi‑Monitor)
+- **Separate Settings Window**: Öffnet dynamisch an der Mausposition.
+- **Brand Design**: Neon Cyberpunk Edition (Void Background, Cyan/Violet Accents).
+- Multi‑Monitor Support & Autostart via Settings.
 
 ## Entwicklung
 

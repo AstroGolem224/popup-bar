@@ -53,8 +53,15 @@ pub struct ShelfItem {
     pub icon_cache_key: String,
     pub position: Position,
     pub group_id: Option<String>,
+    /// Which bar this item belongs to: "main", "left", or "right"
+    #[serde(default = "default_container")]
+    pub container: String,
     pub created_at: String,
     pub last_used: String,
+}
+
+fn default_container() -> String {
+    "main".to_string()
 }
 
 /// A group of shelf items.
@@ -83,7 +90,7 @@ impl ShelfStore {
         DB_PATH.get().cloned().unwrap_or_else(|| PathBuf::from("popup-bar.db"))
     }
 
-    async fn pool() -> Result<&'static sqlx::SqlitePool, String> {
+    pub async fn pool() -> Result<&'static sqlx::SqlitePool, String> {
         DB_POOL
             .get_or_try_init(|| async {
                 let path = Self::get_db_path();
@@ -94,6 +101,19 @@ impl ShelfStore {
                 Ok::<sqlx::SqlitePool, String>(pool)
             })
             .await
+    }
+
+    /// Get the next available horizontal position for an item in a container.
+    pub async fn get_next_position_x(container: &str) -> Result<f64, String> {
+        let pool = Self::pool().await?;
+        let row = sqlx::query("SELECT MAX(position_x) as max_x FROM shelf_items WHERE container = ?1")
+            .bind(container)
+            .fetch_one(pool)
+            .await
+            .map_err(|e| e.to_string())?;
+        
+        let max_x: Option<f64> = row.try_get("max_x").unwrap_or(None);
+        Ok(max_x.map(|x| x + 1.0).unwrap_or(0.0))
     }
 
     fn row_to_item(row: &sqlx::sqlite::SqliteRow) -> Result<ShelfItem, String> {
@@ -109,6 +129,7 @@ impl ShelfStore {
                 y: row.try_get("position_y").map_err(|e| e.to_string())?,
             },
             group_id: row.try_get("group_id").map_err(|e| e.to_string())?,
+            container: row.try_get::<String, _>("container").unwrap_or_else(|_| "main".to_string()),
             created_at: row.try_get("created_at").map_err(|e| e.to_string())?,
             last_used: row.try_get("last_used").map_err(|e| e.to_string())?,
         })
@@ -132,19 +153,26 @@ impl ShelfStore {
             .execute(pool)
             .await
             .map_err(|e| e.to_string())?;
+        sqlx::query("PRAGMA journal_mode = WAL;")
+            .execute(pool)
+            .await
+            .map_err(|e| e.to_string())?;
+        sqlx::query("PRAGMA synchronous = NORMAL;")
+            .execute(pool)
+            .await
+            .map_err(|e| e.to_string())?;
         sqlx::migrate!("./migrations")
             .run(pool)
             .await
             .map_err(|e| e.to_string())?;
 
-        info!("ShelfStore: database initialized");
         Ok(())
     }
 
     pub async fn get_all_items() -> Result<Vec<ShelfItem>, String> {
         let pool = Self::pool().await?;
         let rows = sqlx::query(
-            "SELECT id, item_type, path, display_name, icon_cache_key, position_x, position_y, group_id, created_at, last_used
+            "SELECT id, item_type, path, display_name, icon_cache_key, position_x, position_y, group_id, container, created_at, last_used
              FROM shelf_items
              ORDER BY position_x ASC, position_y ASC",
         )
@@ -155,12 +183,35 @@ impl ShelfStore {
         rows.iter().map(Self::row_to_item).collect()
     }
 
-    pub async fn add_item(item: ShelfItem) -> Result<ShelfItem, String> {
+    /// Get items for a specific container ("main", "left", "right").
+    pub async fn get_items_by_container(container: &str) -> Result<Vec<ShelfItem>, String> {
+        let pool = Self::pool().await?;
+        let rows = sqlx::query(
+            "SELECT id, item_type, path, display_name, icon_cache_key, position_x, position_y, group_id, container, created_at, last_used
+             FROM shelf_items
+             WHERE container = ?1
+             ORDER BY position_x ASC, position_y ASC",
+        )
+        .bind(container)
+        .fetch_all(pool)
+        .await
+        .map_err(|e| e.to_string())?;
+
+        rows.iter().map(Self::row_to_item).collect()
+    }
+
+    pub async fn add_item(mut item: ShelfItem) -> Result<ShelfItem, String> {
+        
+        // If position is default (0.0), find the next available position in this container
+        if item.position.x == 0.0 {
+            item.position.x = Self::get_next_position_x(&item.container).await?;
+        }
+
         let pool = Self::pool().await?;
 
         sqlx::query(
-            "INSERT INTO shelf_items (id, item_type, path, display_name, icon_cache_key, position_x, position_y, group_id, created_at, last_used)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, COALESCE(NULLIF(?9, ''), strftime('%Y-%m-%dT%H:%M:%SZ', 'now')), COALESCE(NULLIF(?10, ''), strftime('%Y-%m-%dT%H:%M:%SZ', 'now')))",
+            "INSERT INTO shelf_items (id, item_type, path, display_name, icon_cache_key, position_x, position_y, group_id, container, created_at, last_used)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, COALESCE(NULLIF(?10, ''), strftime('%Y-%m-%dT%H:%M:%SZ', 'now')), COALESCE(NULLIF(?11, ''), strftime('%Y-%m-%dT%H:%M:%SZ', 'now')))",
         )
         .bind(&item.id)
         .bind(match item.item_type {
@@ -175,6 +226,7 @@ impl ShelfStore {
         .bind(item.position.x)
         .bind(item.position.y)
         .bind(&item.group_id)
+        .bind(&item.container)
         .bind(&item.created_at)
         .bind(&item.last_used)
         .execute(pool)
@@ -182,7 +234,7 @@ impl ShelfStore {
         .map_err(|e| e.to_string())?;
 
         let row = sqlx::query(
-            "SELECT id, item_type, path, display_name, icon_cache_key, position_x, position_y, group_id, created_at, last_used
+            "SELECT id, item_type, path, display_name, icon_cache_key, position_x, position_y, group_id, container, created_at, last_used
              FROM shelf_items WHERE id = ?1",
         )
         .bind(&item.id)
@@ -215,8 +267,8 @@ impl ShelfStore {
         let pool = Self::pool().await?;
         sqlx::query(
             "UPDATE shelf_items
-             SET item_type = ?1, path = ?2, display_name = ?3, icon_cache_key = ?4, position_x = ?5, position_y = ?6, group_id = ?7, last_used = ?8
-             WHERE id = ?9",
+             SET item_type = ?1, path = ?2, display_name = ?3, icon_cache_key = ?4, position_x = ?5, position_y = ?6, group_id = ?7, container = ?8, last_used = ?9
+             WHERE id = ?10",
         )
         .bind(match item.item_type {
             ItemType::File => "file",
@@ -230,6 +282,7 @@ impl ShelfStore {
         .bind(item.position.x)
         .bind(item.position.y)
         .bind(&item.group_id)
+        .bind(&item.container)
         .bind(&item.last_used)
         .bind(&item.id)
         .execute(pool)
@@ -237,7 +290,7 @@ impl ShelfStore {
         .map_err(|e| e.to_string())?;
 
         let row = sqlx::query(
-            "SELECT id, item_type, path, display_name, icon_cache_key, position_x, position_y, group_id, created_at, last_used
+            "SELECT id, item_type, path, display_name, icon_cache_key, position_x, position_y, group_id, container, created_at, last_used
              FROM shelf_items WHERE id = ?1",
         )
         .bind(&item.id)
@@ -319,7 +372,7 @@ impl ShelfStore {
         Ok(())
     }
 
-    pub fn build_item_from_inputs(path: String, item_type: ItemType) -> ShelfItem {
+    pub fn build_item_from_inputs(path: String, item_type: ItemType, container: &str) -> ShelfItem {
         let display_name = std::path::Path::new(&path)
             .file_name()
             .and_then(|s| s.to_str())
@@ -335,6 +388,7 @@ impl ShelfStore {
             icon_cache_key: String::new(),
             position: Position { x: 0.0, y: 0.0 },
             group_id: None,
+            container: container.to_string(),
             created_at: String::new(),
             last_used: String::new(),
         }

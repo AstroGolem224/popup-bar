@@ -12,10 +12,15 @@
   "app": {
     "withGlobalTauri": true,
     "security": {
-      "csp": "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' asset: https://asset.localhost"
+      "csp": "default-src 'self' asset: https://asset.localhost; style-src 'self' 'unsafe-inline'; img-src 'self' asset: https://asset.localhost data:",
+      "assetProtocol": {
+        "enable": true,
+        "scope": ["$APPDATA/skins/**"]
+      }
     },
     "windows": [
       {
+        "label": "main",
         "title": "Popup Bar",
         "width": 640,
         "height": 72,

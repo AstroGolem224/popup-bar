@@ -7,6 +7,15 @@ use log::info;
 use serde::{Deserialize, Serialize};
 use sqlx::Row;
 
+/// Metadata for a stored skin file.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SkinInfo {
+    pub name: String,
+    pub filename: String,
+    pub absolute_path: String,
+}
+
 const SETTINGS_KEY: &str = "app";
 
 /// Application settings with sensible defaults.
@@ -26,6 +35,15 @@ pub struct AppSettings {
     /// Bar height in pixels.
     #[serde(default = "default_bar_height_px")]
     pub bar_height_px: u32,
+    /// Filename of the active skin in {app_data}/skins/, or None for default glassmorphism.
+    #[serde(default)]
+    pub active_skin: Option<String>,
+    #[serde(default = "default_alignment")]
+    pub alignment: String,
+}
+
+fn default_alignment() -> String {
+    "centered".to_string()
 }
 
 fn default_bar_width_px() -> u32 {
@@ -57,6 +75,8 @@ impl Default for AppSettings {
             multi_monitor: false,
             bar_width_px: 480,
             bar_height_px: 72,
+            active_skin: None,
+            alignment: default_alignment(),
         }
     }
 }
@@ -67,15 +87,11 @@ pub struct ConfigManager;
 impl ConfigManager {
     /// Load settings from SQLite; returns defaults if no row or parse error.
     pub async fn load() -> Result<AppSettings, String> {
-        let db_path = crate::modules::shelf_store::ShelfStore::get_db_path();
-        let url = format!("sqlite:{}", db_path.display());
-        let pool = sqlx::SqlitePool::connect(&url)
-            .await
-            .map_err(|e| e.to_string())?;
+        let pool = crate::modules::shelf_store::ShelfStore::pool().await?;
 
         let row = sqlx::query("SELECT value FROM settings WHERE key = ?1")
             .bind(SETTINGS_KEY)
-            .fetch_optional(&pool)
+            .fetch_optional::<&sqlx::SqlitePool>(pool)
             .await
             .map_err(|e| e.to_string())?;
 
@@ -93,11 +109,7 @@ impl ConfigManager {
 
     /// Save settings to SQLite.
     pub async fn save(settings: &AppSettings) -> Result<(), String> {
-        let db_path = crate::modules::shelf_store::ShelfStore::get_db_path();
-        let url = format!("sqlite:{}", db_path.display());
-        let pool = sqlx::SqlitePool::connect(&url)
-            .await
-            .map_err(|e| e.to_string())?;
+        let pool = crate::modules::shelf_store::ShelfStore::pool().await?;
 
         let value = serde_json::to_string(settings).map_err(|e| e.to_string())?;
         sqlx::query(
@@ -105,7 +117,7 @@ impl ConfigManager {
         )
         .bind(SETTINGS_KEY)
         .bind(&value)
-        .execute(&pool)
+        .execute(pool)
         .await
         .map_err(|e| e.to_string())?;
         info!("ConfigManager: settings saved");
@@ -156,5 +168,6 @@ mod tests {
         assert_eq!(decoded.multi_monitor, original.multi_monitor);
         assert_eq!(decoded.bar_width_px, original.bar_width_px);
         assert_eq!(decoded.bar_height_px, original.bar_height_px);
+        assert_eq!(decoded.active_skin, original.active_skin);
     }
 }

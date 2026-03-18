@@ -4,7 +4,7 @@
 //! Phase 1: Hotzone via CGEventTap (kCGEventMouseMoved).
 //! Phase 4: Icon extraction via NSWorkspace.icon(forFile:).
 
-use super::{MousePosition, PlatformProvider};
+use super::{MousePosition, PlatformProvider, MonitorInfo};
 use log::info;
 
 /// macOS platform provider.
@@ -100,5 +100,14 @@ impl PlatformProvider for MacOSProvider {
     fn launch_item(&self, _path: &str) -> Result<(), String> {
         // Phase 2: NSWorkspace.open
         Err("Launcher not implemented on macOS (Phase 2)".into())
+    }
+
+    fn get_primary_monitor(&self) -> Option<MonitorInfo> {
+        Some(MonitorInfo {
+            x: 0,
+            y: 0,
+            width: 1920,
+            height: 1080,
+        })
     }
 }

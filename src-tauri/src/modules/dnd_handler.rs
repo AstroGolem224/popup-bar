@@ -135,7 +135,7 @@ impl DndHandler {
     }
 
     /// Build shelf items from validated dropped paths (files, folders, apps).
-    pub fn build_items_from_paths(paths: Vec<String>) -> Result<Vec<ShelfItem>, String> {
+    pub fn build_items_from_paths(paths: Vec<String>, container: &str) -> Result<Vec<ShelfItem>, String> {
         let normalized: Vec<String> = paths
             .into_iter()
             .map(|p| Self::normalize_path(&p))
@@ -145,7 +145,7 @@ impl DndHandler {
             .into_iter()
             .map(|path| {
                 let item_type = Self::classify_path(Path::new(&path));
-                ShelfStore::build_item_from_inputs(path, item_type)
+                ShelfStore::build_item_from_inputs(path, item_type, container)
             })
             .collect())
     }

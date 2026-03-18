@@ -1,5 +1,11 @@
 export type Theme = "light" | "dark" | "system";
 
+export interface SkinInfo {
+  name: string;
+  filename: string;
+  absolutePath: string;
+}
+
 export interface Settings {
   hotzoneSize: number;
   animationSpeed: number;
@@ -11,6 +17,8 @@ export interface Settings {
   multiMonitor: boolean;
   barWidthPx: number;
   barHeightPx: number;
+  activeSkin?: string | null;
+  alignment: "centered" | "start" | "grid";
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -23,4 +31,6 @@ export const DEFAULT_SETTINGS: Settings = {
   multiMonitor: false,
   barWidthPx: 480,
   barHeightPx: 72,
+  activeSkin: null,
+  alignment: "centered",
 };

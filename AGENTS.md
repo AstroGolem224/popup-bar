@@ -2,15 +2,7 @@
 
 > Vorgaben für KI-Agenten (Atlas / Claude Code / Codex) die in diesem Repo arbeiten.
 
----
-
-## Wer bin ich
-
-- **Name:** Matthias, Alias **Druid**
-- **Rolle:** Solo-Dev, Full-Stack
 - **Ton:** Locker, knapp, direkt. Kein Gelaber.
-
----
 
 ## Kommunikation
 
@@ -18,13 +10,9 @@
 - **Immer proaktiv Verbesserungen vorschlagen** — nicht nur abarbeiten, sondern mitdenken
 - Deutsche Erklärungen, englische Fachbegriffe und Code
 - Keine Marketing-Sprache, keine Füllwörter
-
----
-
 ## Code-Standards
 
 - **Rock-solid** — robustes Error-Handling, Edge-Cases abgedeckt, keine Shortcuts
-- **Produktionsreif ab Zeile 1** — kein "machen wir später"
 - **Sauber dokumentiert:**
   - Rust: `///` doc comments auf allen pub items
   - TypeScript: JSDoc auf allen exports
@@ -34,11 +22,9 @@
 - Kein `todo!()` das panicked — immer Stubs mit `Ok(())`, `Err("not implemented")`, oder Defaults
 - `cargo clippy -- -D warnings` muss clean sein
 - `npx tsc --noEmit` muss clean sein
-
----
-
+- **UI/UX** - intuitive User Interfaces sind must.
+- Schöne designte User Interfaces mit WOW-Effekt für User sind Pflicht.
 ## Workflow-Regeln (STRIKT)
-
 ### 1. Planung vor Implementierung
 
 - **VOR** jeder Implementierung die Planungsdokumente lesen:
@@ -59,9 +45,6 @@
 - Conventional Commits: `feat(phase-X):`, `fix:`, `docs:`, `refactor:`
 - Kurze Zusammenfassung + Aufzählung der Änderungen
 - Referenz auf Phase/Aufgabe aus dem Implementierungsplan
-
----
-
 ## Projekt-Kontext
 
 - **Tech-Stack:** Tauri 2 (Rust) + React + TypeScript + Vite + Zustand
@@ -88,9 +71,6 @@
 
 - **Commands** (Request-Response): `get_shelf_items`, `add_shelf_item`, `get_settings`, etc.
 - **Events** (Pub-Sub): `hotzone:enter`, `hotzone:leave`, `shelf:updated`, `window:show`, etc.
-
----
-
 ## CI/CD
 
 - GitHub Actions: `.github/workflows/ci.yml`
@@ -98,18 +78,18 @@
 - Frontend: tsc + vite build
 - **Kein Push auf main der CI bricht**
 
----
+## UMBRA Agent Protocol (UAP) — REPRÄSENTATION [DIESE REGEL IST STRIKT]
 
-## Phasenplan (Kurzversion)
+Jeder Agent, der an diesem Projekt arbeitet, **MUSS** seinen Status an den Heartbeat-Endpoint senden.
 
-| Phase | Was | Status |
-|-------|-----|--------|
-| 0 | Fundament: Scaffold, CI/CD, Vibrancy, Glasmorphism | ✅ Done |
-| 1 | Hotzone-Detection + Slide-Animation | ✅ Done |
-| 2 | Shelf Core: SQLite, CRUD, Grid-UI | ✅ Done |
-| 3 | Drag & Drop | ✅ Done |
-| 4 | Icons & Visuals | ✅ Done |
-| 5 | Settings-UI, Autostart, Performance | ✅ Done |
-| 6 | Testing & Release | ⬜ Offen |
+- **Agent-ID:** `Jim`
+- **Token:** `X-Agent-Token: umbra-uap-2026`
+- **Endpoint:** `http://100.98.137.48:8765/api/agents/Jim/heartbeat`
+
+### Protokoll:
+1. **VOR** einem nicht-trivialen Task: POST mit `{"status":"working","activeTaskId":"..."}`
+2. **NACH** Abschluss: POST mit `{"status":"idle","activeTaskId":null}`
+
+Helper-Script: `.\scripts\agent_heartbeat.ps1` (PowerShell)
 
 Details: `docs/architecture/IMPLEMENTATION_PLAN.md`

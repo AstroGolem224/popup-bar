@@ -6,25 +6,19 @@
 
 /* Default (and Linux) */
 :root {
-  --shelf-bar-bg: rgba(15, 15, 20, 0.75);
-  --shelf-bar-blur: blur(20px) saturate(180%);
-  --shelf-bar-border: 1px solid rgba(255, 255, 255, 0.12);
-  --shelf-bar-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  --shelf-bar-bg: rgba(8, 13, 19, 0.85); /* brand-void */
+  --shelf-bar-blur: blur(24px) saturate(200%);
+  --shelf-bar-border: 1px solid rgba(13, 232, 245, 0.15); /* brand-cyan highlight */
+  --shelf-bar-shadow: 0 12px 48px rgba(0, 0, 0, 0.6);
+  --brand-cyan: #0de8f5;
+  --brand-violet: #a855f7;
 }
 
-.platform-macos .shelf-bar {
-  --shelf-bar-bg: rgba(30, 30, 35, 0.3);
-  --shelf-bar-blur: blur(4px);
-}
-
-.platform-windows .shelf-bar {
-  --shelf-bar-bg: rgba(20, 20, 25, 0.45);
-  --shelf-bar-blur: blur(16px) saturate(150%);
-}
-
+.platform-macos .shelf-bar,
+.platform-windows .shelf-bar,
 .platform-linux .shelf-bar {
-  --shelf-bar-bg: rgba(18, 18, 24, 0.85);
-  --shelf-bar-blur: blur(20px) saturate(180%);
+  --shelf-bar-bg: rgba(8, 13, 19, 0.75);
+  --shelf-bar-border: 1px solid rgba(13, 232, 245, 0.2);
 }
 
 .glass {

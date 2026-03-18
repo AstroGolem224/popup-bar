@@ -4,7 +4,7 @@
 //! Phase 1: Hotzone via XInput2 (X11) / layer-shell trigger strip (Wayland).
 //! Phase 4: Icon extraction via Freedesktop Icon Theme Spec.
 
-use super::{MousePosition, PlatformProvider};
+use super::{MousePosition, PlatformProvider, MonitorInfo};
 use log::info;
 
 /// Linux platform provider with X11/Wayland detection.
@@ -107,5 +107,14 @@ impl PlatformProvider for LinuxProvider {
     fn launch_item(&self, _path: &str) -> Result<(), String> {
         // Phase 2: xdg-open
         Err("Launcher not implemented on Linux (Phase 2)".into())
+    }
+
+    fn get_primary_monitor(&self) -> Option<MonitorInfo> {
+        Some(MonitorInfo {
+            x: 0,
+            y: 0,
+            width: 1920,
+            height: 1080,
+        })
     }
 }

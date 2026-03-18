@@ -8,6 +8,7 @@
   padding: 8px;
   border-radius: 8px;
   cursor: pointer;
+  user-select: none;
   transition: transform 0.15s ease, background 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
 }
 
@@ -88,4 +89,17 @@
     transform: none;
     box-shadow: none;
   }
+}
+
+/* Mouse-based reorder visual feedback */
+.shelf-item--dragging {
+  opacity: 0.4;
+  transform: scale(0.9);
+}
+
+.shelf-item--drag-over {
+  outline: 2px solid rgba(99, 179, 237, 0.8);
+  outline-offset: -2px;
+  background: rgba(99, 179, 237, 0.15);
+  transform: scale(1.05);
 }

@@ -4,30 +4,10 @@
  * Uses Tauri's onDragDropEvent for OS-native file/folder/app drops (paths).
  * HTML5 handlers kept for URL paste/drop where supported.
  */
-import { useCallback, useEffect, useRef, useState, type DragEvent } from "react";
-import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
-import { addDroppedPaths, addShelfItem } from "../utils/tauri-bridge";
+import { useCallback, useEffect, useState, type DragEvent } from "react";
+import { addShelfItem, getCurrentWebviewWindow } from "../utils/tauri-bridge";
 import { useShelfStore } from "../stores/shelfStore";
 
-/** Convert file:// URL or path string to a normal filesystem path for the backend. */
-function toFilesystemPath(s: string): string {
-  const t = s.trim();
-  if (t.startsWith("file:///")) {
-    try {
-      return decodeURIComponent(t.slice(7).replace(/^\/+/, ""));
-    } catch {
-      return t.slice(7).replace(/^\/+/, "");
-    }
-  }
-  if (t.startsWith("file://")) {
-    try {
-      return decodeURIComponent(t.slice(6));
-    } catch {
-      return t.slice(6);
-    }
-  }
-  return t;
-}
 
 interface UseDragDropReturn {
   isDragOver: boolean;
@@ -43,6 +23,15 @@ export function useDragDrop(): UseDragDropReturn {
   const addItems = useShelfStore((state) => state.addItems);
   const addItem = useShelfStore((state) => state.addItem);
   const setError = useShelfStore((state) => state.setError);
+  const [windowLabel, setWindowLabel] = useState("main");
+
+  useEffect(() => {
+    try {
+      setWindowLabel(getCurrentWebviewWindow().label);
+    } catch (e) {
+      console.warn("[drag-drop] Failed to detect window label", e);
+    }
+  }, []);
 
   const inferDragHint = (event: DragEvent) => {
     const types = Array.from(event.dataTransfer?.types ?? []);
@@ -52,6 +41,11 @@ export function useDragDrop(): UseDragDropReturn {
   };
 
   const onDragOver = useCallback((e: DragEvent) => {
+    // Only handle external file/link drops
+    if (!e.dataTransfer.types.includes("Files") && !e.dataTransfer.types.includes("text/uri-list")) {
+      return;
+    }
+
     e.preventDefault();
     setDragHint(inferDragHint(e));
     if (!isDragOver) setIsDragOver(true);
@@ -78,7 +72,7 @@ export function useDragDrop(): UseDragDropReturn {
       if (!droppedUrl) return;
       if (droppedUrl.startsWith("file://")) return;
       if (/^https?:\/\//i.test(droppedUrl)) {
-        const createdUrlItem = await addShelfItem(droppedUrl, "url");
+        const createdUrlItem = await addShelfItem(droppedUrl, "url", windowLabel);
         addItem(createdUrlItem);
       }
     } catch (error: unknown) {
@@ -93,62 +87,12 @@ export function useDragDrop(): UseDragDropReturn {
     }
   }, [addItem, addItems, setError]);
 
-  // Tauri native drag-drop (files, folders, app shortcuts) — primary path when dragDropEnabled
-  const lastDropRef = useRef<{ paths: string[]; at: number }>({ paths: [], at: 0 });
-  const DROP_DEBOUNCE_MS = 800;
-
+  // Tauri native drag-drop (files, folders, app shortcuts)
+  // MOVED TO RUST (lib.rs) to ensure consistent behavior across all bar windows
+  // and handle drops even when windows are hidden/loading.
   useEffect(() => {
-    let unlisten: (() => void) | undefined;
-
-    getCurrentWebviewWindow()
-      .onDragDropEvent((event) => {
-        const p = event.payload;
-        if (p.type === "enter" || p.type === "over") {
-          setIsDragOver(true);
-          setDragHint("Hier ablegen");
-        } else if (p.type === "leave") {
-          setIsDragOver(false);
-          setDragHint("Dateien, Ordner oder Links hier ablegen");
-        } else if (p.type === "drop" && p.paths?.length) {
-          setIsDragOver(false);
-          const paths = p.paths.map(toFilesystemPath);
-          const now = Date.now();
-          const last = lastDropRef.current;
-          if (
-            last.paths.length === paths.length &&
-            last.paths.every((pp, i) => pp === paths[i]) &&
-            now - last.at < DROP_DEBOUNCE_MS
-          ) {
-            return;
-          }
-          lastDropRef.current = { paths, at: now };
-          addDroppedPaths(paths)
-            .then((created) => {
-              addItems(created);
-            })
-            .catch((err: unknown) => {
-              const msg =
-                typeof err === "string"
-                  ? err
-                  : err instanceof Error
-                    ? err.message
-                    : "Ablegen fehlgeschlagen";
-              console.warn("add_dropped_paths failed", err);
-              setError(msg);
-            });
-        }
-      })
-      .then((fn) => {
-        unlisten = fn;
-      })
-      .catch((err) => {
-        console.warn("onDragDropEvent register failed", err);
-      });
-
-    return () => {
-      unlisten?.();
-    };
-  }, [addItems, setError]);
+    // No-op: file drops handled by setup_drop_handler in src-tauri/src/lib.rs
+  }, []);
 
   return {
     isDragOver,

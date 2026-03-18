@@ -1,18 +1,122 @@
-import { invoke } from "@tauri-apps/api/core";
+import { invoke as tauriInvoke } from "@tauri-apps/api/core";
+import { listen as tauriListen, type UnlistenFn, type EventCallback } from "@tauri-apps/api/event";
+import { getCurrentWebviewWindow as tauriGetCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
+import { getCurrentWindow as tauriGetCurrentWindow } from "@tauri-apps/api/window";
 import type { ItemGroup, ItemType, ShelfItem } from "../types/shelf";
-import type { Settings } from "../types/settings";
+import type { Settings, SkinInfo } from "../types/settings";
+
+/** Helper to detect if we are running inside the Tauri webview */
+const isTauri =
+  typeof window !== "undefined" &&
+  (!!(window as any).__TAURI_INTERNALS__ || 
+   !!(window as any).__TAURI__ ||
+   !!(window as any).rpc);
+
+/** Safe invoke wrapper that doesn't crash in non-Tauri environments */
+async function invoke<T>(command: string, args?: Record<string, unknown>): Promise<T> {
+  if (!isTauri || typeof tauriInvoke !== "function") {
+    console.warn(`[tauri-bridge] invoke("${command}") mocked (non-Tauri environment)`);
+    return getMockValue<T>(command);
+  }
+
+  try {
+    return await tauriInvoke<T>(command, args);
+  } catch (err) {
+    if (err instanceof Error && err.message.includes("__TAURI_INTERNALS__")) {
+      console.warn(`[tauri-bridge] invoke("${command}") failed due to missing internals`);
+      return getMockValue<T>(command);
+    }
+    throw err;
+  }
+}
+
+/** Safe getCurrentWebviewWindow wrapper */
+export function getCurrentWebviewWindow() {
+  if (!isTauri) {
+    return {
+      label: "main",
+      listen: async (event: string, _callback: EventCallback<any>): Promise<UnlistenFn> => {
+        console.warn(`[tauri-bridge] listen("${event}") mocked (non-Tauri)`);
+        return () => {};
+      },
+      emit: async (event: string, _payload?: any) => {
+        console.warn(`[tauri-bridge] emit("${event}") mocked (non-Tauri)`);
+      },
+    } as any;
+  }
+  try {
+    return tauriGetCurrentWebviewWindow();
+  } catch (e) {
+    console.warn("[tauri-bridge] getCurrentWebviewWindow failed, falling back to mock", e);
+    return { label: "main" } as any;
+  }
+}
+
+/** Safe getCurrentWindow wrapper */
+export function getCurrentWindow() {
+  if (!isTauri) {
+    return {
+      label: "main",
+      listen: async (event: string, _callback: EventCallback<any>): Promise<UnlistenFn> => {
+        console.warn(`[tauri-bridge] window.listen("${event}") mocked (non-Tauri)`);
+        return () => {};
+      },
+    } as any;
+  }
+  try {
+    return tauriGetCurrentWindow();
+  } catch (e) {
+    console.warn("[tauri-bridge] getCurrentWindow failed, falling back to mock", e);
+    return { label: "main" } as any;
+  }
+}
+
+/** Safe listen wrapper */
+export async function listen<T>(
+  event: string,
+  handler: EventCallback<T>,
+): Promise<UnlistenFn> {
+  if (!isTauri || typeof tauriListen !== "function") {
+    console.warn(`[tauri-bridge] global listen("${event}") mocked (non-Tauri)`);
+    return () => {};
+  }
+  return tauriListen(event, handler);
+}
+
+function getMockValue<T>(command: string): T {
+  console.log(`[tauri-bridge] returning mock for: ${command}`);
+  if (command === "get_shelf_items") return [] as unknown as T;
+  if (command === "get_item_groups") return [] as unknown as T;
+  if (command === "get_settings") return {
+    hotzoneSize: 5,
+    animationSpeed: 1.0,
+    blurIntensity: 20,
+    tintColor: "rgba(255, 255, 255, 0.1)",
+    theme: "system",
+    autostart: false,
+    multiMonitor: false,
+    barWidthPx: 480,
+    barHeightPx: 72,
+    activeSkin: null,
+    alignment: "centered"
+  } as unknown as T;
+  if (command === "list_skins") return [] as unknown as T;
+  if (command === "get_platform_info") return { os: "windows", arch: "x86_64", version: "10" } as unknown as T;
+  return undefined as unknown as T;
+}
 
 /** Typed wrappers around Tauri invoke commands. */
 
-export async function getShelfItems(): Promise<ShelfItem[]> {
-  return invoke<ShelfItem[]>("get_shelf_items");
+export async function getShelfItems(container?: string): Promise<ShelfItem[]> {
+  return invoke<ShelfItem[]>("get_shelf_items", { container: container ?? null });
 }
 
 export async function addShelfItem(
   path: string,
   itemType: ItemType,
+  container?: string,
 ): Promise<ShelfItem> {
-  return invoke<ShelfItem>("add_shelf_item", { path, itemType });
+  return invoke<ShelfItem>("add_shelf_item", { path, itemType, container: container ?? null });
 }
 
 export async function removeShelfItem(id: string): Promise<void> {
@@ -23,8 +127,8 @@ export async function updateShelfItem(item: ShelfItem): Promise<ShelfItem> {
   return invoke<ShelfItem>("update_shelf_item", { item });
 }
 
-export async function addDroppedPaths(paths: string[]): Promise<ShelfItem[]> {
-  return invoke<ShelfItem[]>("add_dropped_paths", { paths });
+export async function addDroppedPaths(paths: string[], container?: string): Promise<ShelfItem[]> {
+  return invoke<ShelfItem[]>("add_dropped_paths", { paths, container: container ?? null });
 }
 
 export async function reorderShelfItems(orderedIds: string[]): Promise<void> {
@@ -114,4 +218,37 @@ export interface PlatformInfo {
 
 export async function getPlatformInfo(): Promise<PlatformInfo> {
   return invoke<PlatformInfo>("get_platform_info");
+}
+
+export async function listSkins(): Promise<SkinInfo[]> {
+  return invoke<SkinInfo[]>("list_skins");
+}
+
+export async function importSkin(sourcePath: string): Promise<SkinInfo> {
+  return invoke<SkinInfo>("import_skin", { sourcePath });
+}
+
+export async function importSkinBytes(
+  filenameStem: string,
+  ext: string,
+  bytes: number[],
+): Promise<SkinInfo> {
+  return invoke<SkinInfo>("import_skin_bytes", { filenameStem, ext, bytes });
+}
+
+export async function setActiveSkin(filename: string | null): Promise<Settings> {
+  return invoke<Settings>("set_active_skin", { filename });
+}
+
+export async function deleteSkin(filename: string): Promise<Settings> {
+  return invoke<Settings>("delete_skin", { filename });
+}
+
+/** Returns a base64 data URL for a skin image file. */
+export async function getSkinDataUrl(filename: string): Promise<string | null> {
+  console.log("[skin] getSkinDataUrl called with:", filename);
+  return invoke<string>("get_skin_data", { filename }).catch((err) => {
+    console.error("[skin] get_skin_data FAILED for", filename, err);
+    return null;
+  });
 }

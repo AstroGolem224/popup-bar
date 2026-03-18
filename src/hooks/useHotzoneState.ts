@@ -1,18 +1,11 @@
-/**
- * Hook: Hotzone visibility state.
- *
- * Listens to hotzone:enter / hotzone:leave events from the Rust backend
- * and exposes whether the popup bar should be visible.
- *
- * Subscribes to backend events and syncs window lifecycle commands.
- */
-import { listen } from "@tauri-apps/api/event";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   completeHideWindow,
   completeShowWindow,
   hideWindow,
   showWindow,
+  listen,
+  getCurrentWindow,
 } from "../utils/tauri-bridge";
 import { EVENTS } from "../types/events";
 
@@ -38,7 +31,13 @@ export function useHotzoneState(): HotzoneState {
     let unlistenLeave: (() => void) | null = null;
 
     const setup = async () => {
-      unlistenEnter = await listen(EVENTS.HOTZONE_ENTER, async () => {
+      const label = getCurrentWindow().label;
+      const targetEdge = label === "main" ? "top" : label;
+      console.log(`[hotzone] window="${label}" listening for edge="${targetEdge}"`);
+
+      unlistenEnter = await listen<{ edge: string }>(EVENTS.HOTZONE_ENTER, async (event) => {
+        console.log(`[hotzone] window="${label}" received ENTER edge="${event.payload.edge}" (want="${targetEdge}")`);
+        if (event.payload.edge !== targetEdge) return;
         setIsVisible(true);
         try {
           pendingHideTokenRef.current = null;
@@ -49,7 +48,9 @@ export function useHotzoneState(): HotzoneState {
         }
       });
 
-      unlistenLeave = await listen(EVENTS.HOTZONE_LEAVE, async () => {
+      unlistenLeave = await listen<{ edge: string }>(EVENTS.HOTZONE_LEAVE, async (event) => {
+        if (event.payload.edge !== targetEdge) return;
+        console.log(`[hotzone] leave edge: ${event.payload.edge}`);
         setIsVisible(false);
         try {
           pendingShowTokenRef.current = null;

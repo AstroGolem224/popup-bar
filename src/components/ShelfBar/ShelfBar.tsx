@@ -1,12 +1,4 @@
-/**
- * ShelfBar — Main popup bar container.
- *
- * Top-level visual component with glassmorphism background.
- * Contains the ShelfGrid for items and the settings gear.
- */
-import { useState } from "react";
 import { ShelfGrid } from "../ShelfGrid";
-import { SettingsPanel } from "../Settings";
 import { useShelfItems } from "../../hooks/useShelfItems";
 import { useGlassmorphism } from "../../hooks/useGlassmorphism";
 import { useSettingsStore } from "../../stores/settingsStore";
@@ -17,13 +9,18 @@ export interface ShelfBarProps {
   className?: string;
   isVisible: boolean;
   onAnimationComplete?: () => void | Promise<void>;
+  orientation?: "horizontal" | "vertical";
 }
 
-export function ShelfBar({ className, isVisible, onAnimationComplete }: ShelfBarProps) {
+export function ShelfBar({ 
+  className, 
+  isVisible, 
+  onAnimationComplete,
+  orientation = "horizontal"
+}: ShelfBarProps) {
   const { items, removeItem } = useShelfItems();
   const glassStyle = useGlassmorphism();
   const animationSpeed = useSettingsStore((s) => s.settings.animationSpeed);
-  const [settingsOpen, setSettingsOpen] = useState(false);
   const visibilityClass = isVisible ? "shelf-bar--visible" : "shelf-bar--hidden";
 
   const barStyle = {
@@ -32,10 +29,12 @@ export function ShelfBar({ className, isVisible, onAnimationComplete }: ShelfBar
     ["--shelf-bar-duration-hide" as string]: `${180 / animationSpeed}ms`,
   };
 
+  const alignment = useSettingsStore((s) => s.settings.alignment);
+
   return (
     <>
       <div
-        className={`shelf-bar ${visibilityClass} ${className ?? ""}`}
+        className={`shelf-bar shelf-bar--${orientation} ${visibilityClass} ${className ?? ""}`}
         style={barStyle}
         onAnimationEnd={(event) => {
           if (event.currentTarget === event.target) {
@@ -50,7 +49,7 @@ export function ShelfBar({ className, isVisible, onAnimationComplete }: ShelfBar
             </p>
           </div>
         ) : (
-          <ShelfGrid items={items} onDeleteItem={(id) => void removeItem(id)} />
+          <ShelfGrid items={items} alignment={alignment} orientation={orientation} onDeleteItem={(id) => void removeItem(id)} />
         )}
         <div className="shelf-bar__right-actions">
           <button
@@ -66,7 +65,6 @@ export function ShelfBar({ className, isVisible, onAnimationComplete }: ShelfBar
             type="button"
             className="shelf-bar__settings-btn"
             onClick={() => {
-              setSettingsOpen(true);
               void setSettingsExpanded(true);
             }}
             aria-label="Einstellungen öffnen"
@@ -76,29 +74,6 @@ export function ShelfBar({ className, isVisible, onAnimationComplete }: ShelfBar
           </button>
         </div>
       </div>
-
-      {settingsOpen ? (
-        <>
-          <div
-            className="shelf-bar__backdrop"
-            role="presentation"
-            aria-hidden
-            onClick={() => {
-              setSettingsOpen(false);
-              void setSettingsExpanded(false);
-            }}
-          />
-          <div className="shelf-bar__settings-wrap">
-            <SettingsPanel
-              className="settings-panel--open"
-              onClose={() => {
-                setSettingsOpen(false);
-                void setSettingsExpanded(false);
-              }}
-            />
-          </div>
-        </>
-      ) : null}
     </>
   );
 }
