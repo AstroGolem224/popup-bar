@@ -65,6 +65,9 @@ export function SettingsPanel({ className, onClose }: SettingsPanelProps) {
             value={settings.hotzoneSize}
             onChange={(e) => apply("hotzoneSize", Number(e.target.value))}
           />
+          <span className="settings-panel__hint">
+            {settings.hotzoneSize} px
+          </span>
         </label>
       </SettingsGroup>
 
@@ -107,6 +110,9 @@ export function SettingsPanel({ className, onClose }: SettingsPanelProps) {
             value={settings.animationSpeed}
             onChange={(e) => apply("animationSpeed", Number(e.target.value))}
           />
+          <span className="settings-panel__hint">
+            {Number(settings.animationSpeed || 1).toFixed(1)}x
+          </span>
         </label>
         <label className="settings-panel__field settings-panel__field--row" title="Bar nur auf dem Hauptmonitor anzeigen">
           <span>Nur Primärmonitor</span>
