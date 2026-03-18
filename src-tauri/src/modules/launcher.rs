@@ -7,6 +7,7 @@
 
 use super::shelf_store::ItemType;
 use log::info;
+#[cfg(target_os = "windows")]
 use std::process::Command;
 use tauri::AppHandle;
 use tauri_plugin_shell::ShellExt;
@@ -24,6 +25,7 @@ impl Launcher {
     /// On Windows we use `cmd /c start "" "path"` so that .lnk and paths
     /// with spaces work reliably (shell.open is deprecated and can misbehave).
     #[cfg_attr(target_os = "windows", allow(unused_variables))]
+    #[allow(deprecated)]
     pub fn open(app: &AppHandle, item_type: &ItemType, path: &str) -> Result<(), String> {
         info!("Launcher: open {:?} -> {}", item_type, path);
         if !Self::validate_target(path) {
@@ -67,6 +69,7 @@ impl Launcher {
     /// Delegiert aktuell an `open`, sodass das OS entscheidet, ob es
     /// ein reveal oder open ist. Eine spezialisierte implementation
     /// kann später ergänzt werden.
+    #[allow(deprecated)]
     pub fn reveal_in_file_manager(app: &AppHandle, path: &str) -> Result<(), String> {
         info!("Launcher: reveal_in_file_manager {}", path);
         if !Self::validate_target(path) {

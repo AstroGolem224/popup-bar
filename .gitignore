@@ -22,3 +22,5 @@ Thumbs.db
 
 # Build output
 *.tsbuildinfo
+!dist/.gitkeep
+!src-tauri/icons/icon.png
