@@ -1,0 +1,3 @@
+## 2024-05-24 - High-Frequency State Change List Re-renders
+**Learning:** In this application architecture, `useHotzoneState` triggers high-frequency visibility toggles on mouse enter/leave, which causes the entire React tree to re-render. Since list components like `ShelfGrid` and `ShelfItem` iterate over many items, re-rendering them continuously creates a noticeable performance hit.
+**Action:** Always wrap React list components (`ShelfGrid`, `ShelfItem`) in `React.memo` and stabilize their callback props using `useCallback` when they are placed under high-frequency state parents, preventing unneeded deep re-renders.

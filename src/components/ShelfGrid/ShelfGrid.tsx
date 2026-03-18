@@ -1,6 +1,7 @@
 import { ShelfItem as ShelfItemComponent } from "../ShelfItem";
 import type { ShelfItem } from "../../types/shelf";
 import { useItemReorder } from "../../hooks/useItemReorder";
+import React from "react";
 import "./ShelfGrid.css";
 
 export interface ShelfGridProps {
@@ -9,7 +10,7 @@ export interface ShelfGridProps {
   onDeleteItem?: (id: string) => void | Promise<void>;
 }
 
-export function ShelfGrid({ items, onDeleteItem }: ShelfGridProps) {
+export const ShelfGrid = React.memo(function ShelfGrid({ items, onDeleteItem }: ShelfGridProps) {
   const { onDragStart, onDropOnItem } = useItemReorder();
 
   return (
@@ -25,4 +26,4 @@ export function ShelfGrid({ items, onDeleteItem }: ShelfGridProps) {
       ))}
     </div>
   );
-}
+});
