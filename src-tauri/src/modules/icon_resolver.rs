@@ -70,15 +70,15 @@ impl IconResolver {
             let source_path: String = existing_row
                 .try_get("source_path")
                 .unwrap_or_else(|_| String::new());
-            if Path::new(&existing_path).exists() {
-                if source_path.is_empty() || Path::new(&source_path).exists() {
-                    return Ok(CachedIcon {
-                        cache_key,
-                        path: existing_path,
-                        format: IconFormat::Png,
-                        size: 256,
-                    });
-                }
+            if Path::new(&existing_path).exists()
+                && (source_path.is_empty() || Path::new(&source_path).exists())
+            {
+                return Ok(CachedIcon {
+                    cache_key,
+                    path: existing_path,
+                    format: IconFormat::Png,
+                    size: 256,
+                });
             }
             let _ = self.evict(&cache_key);
             let _ = sqlx::query("DELETE FROM icon_cache WHERE hash = ?1")
