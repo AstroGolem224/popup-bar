@@ -10,7 +10,7 @@ use crate::modules::window_manager::BarRect;
 use crate::BarRectState;
 use crate::ManagerState;
 use serde::Serialize;
-use log::warn;
+use log::{info, warn};
 use std::str::FromStr;
 use tauri::{AppHandle, Manager, State, WebviewWindow};
 
@@ -115,7 +115,9 @@ pub async fn show_window(
 ) -> Result<Option<u64>, String> {
     let settings = ConfigManager::load().await.unwrap_or_default();
     let primary_only = !settings.multi_monitor;
-    let _label = window.label();
+    let label = window.label();
+
+    let label = window.label();
 
     let mut manager = window_manager.0
         .lock()
@@ -139,9 +141,10 @@ pub async fn show_window(
             *r = rect;
         }
         window.show().map_err(|e| {
-            warn!("[show_window] window.show() failed for {}: {}", _label, e);
+            warn!("[show_window] window.show() failed for {}: {}", label, e);
             e.to_string()
         })?;
+    } else {
     }
     Ok(token)
 }

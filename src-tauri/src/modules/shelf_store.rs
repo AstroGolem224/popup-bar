@@ -4,6 +4,7 @@
 //! Provides the core data layer for creating, reading, updating, and
 //! deleting shelf entries.
 
+use log::info;
 use serde::{Deserialize, Serialize};
 use sqlx::Row;
 use std::path::PathBuf;

@@ -6,7 +6,7 @@
 //! Full implementation in Phase 2 (basic) / Phase 3 (advanced).
 
 use super::shelf_store::ItemType;
-#[allow(unused_imports)]
+use log::info;
 use std::process::Command;
 use tauri::AppHandle;
 use tauri_plugin_shell::ShellExt;
@@ -24,7 +24,7 @@ impl Launcher {
     /// On Windows we use `cmd /c start "" "path"` so that .lnk and paths
     /// with spaces work reliably (shell.open is deprecated and can misbehave).
     #[cfg_attr(target_os = "windows", allow(unused_variables))]
-    pub fn open(app: &AppHandle, _item_type: &ItemType, path: &str) -> Result<(), String> {
+    pub fn open(app: &AppHandle, item_type: &ItemType, path: &str) -> Result<(), String> {
         if !Self::validate_target(path) {
             return Err("Launcher: invalid target path".into());
         }
@@ -47,7 +47,6 @@ impl Launcher {
         }
 
         #[cfg(not(target_os = "windows"))]
-        #[allow(deprecated)]
         app.shell()
             .open(path.to_string(), None)
             .map_err(|e| format!("Launcher: open failed: {e}"))
@@ -71,7 +70,6 @@ impl Launcher {
             return Err("Launcher: invalid target path".into());
         }
 
-        #[allow(deprecated)]
         app.shell()
             .open(path.to_string(), None)
             .map_err(|e| format!("Launcher: reveal_in_file_manager failed: {e}"))

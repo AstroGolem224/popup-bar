@@ -12,7 +12,8 @@ use modules::config::ConfigManager;
 use modules::hotzone::{HotzoneConfig, HotzoneTracker};
 use modules::shelf_store::ShelfStore;
 use modules::window_manager::{BarRect, PopupWindowManager, WindowConfig};
-use std::sync::Mutex;
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
 use tauri::Manager;
 
 pub struct ManagerState(pub Mutex<PopupWindowManager>);
@@ -240,7 +241,7 @@ fn setup_drop_handler(app: &tauri::AppHandle, window: &tauri::WebviewWindow) {
                         let container = "main";
                         tauri::async_runtime::spawn(async move {
                             match crate::commands::shelf_commands::add_dropped_paths(path_strings, Some(container.to_string())).await {
-                                Ok(_items) => {
+                                Ok(items) => {
                                     // Emit event so all windows refresh their shelf items
                                     use tauri::Emitter;
                                     let _ = handle.emit("shelf_items_changed", ());

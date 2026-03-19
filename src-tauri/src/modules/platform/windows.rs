@@ -6,6 +6,7 @@
 
 use super::{MousePosition, PlatformProvider};
 use base64::Engine;
+use log::info;
 use std::process::Command;
 use windows_sys::Win32::Foundation::POINT;
 use windows_sys::Win32::UI::WindowsAndMessaging::GetCursorPos;

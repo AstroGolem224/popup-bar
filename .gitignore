@@ -3,8 +3,8 @@ src-tauri/target/
 
 # Node
 node_modules/
-dist/*
-!dist/.gitkeep
+/dist/*
+!/dist/.gitkeep
 
 # Environment
 .env
