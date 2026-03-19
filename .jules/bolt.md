@@ -1,0 +1,3 @@
+## 2024-05-XX - [React List Re-Rendering Architecture Pattern]
+**Learning:** Found an architectural pattern causing full tree re-renders inside `ShelfGrid` on visibility changes or item drag actions. In high-frequency mouse event systems (drag/drop and hover/leave visibility), mapping large item lists without component memoization creates expensive O(n) re-renders for O(1) event responses.
+**Action:** When implementing high-frequency list rendering that depends on isolated hover/focus interactions, proactively wrap list item components (`ShelfItem`) and container components (`ShelfGrid`) in `React.memo` and strictly stabilize props using `useCallback` and `useRef` for closures.

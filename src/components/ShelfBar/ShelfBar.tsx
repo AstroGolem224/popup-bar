@@ -1,5 +1,6 @@
 import { ShelfGrid } from "../ShelfGrid";
 import { useShelfItems } from "../../hooks/useShelfItems";
+import { useCallback, useRef, useEffect } from "react";
 import { useGlassmorphism } from "../../hooks/useGlassmorphism";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { exitApp, setSettingsExpanded } from "../../utils/tauri-bridge";
@@ -22,6 +23,14 @@ export function ShelfBar({
   const glassStyle = useGlassmorphism();
   const animationSpeed = useSettingsStore((s) => s.settings.animationSpeed);
   const visibilityClass = isVisible ? "shelf-bar--visible" : "shelf-bar--hidden";
+
+  // Stabilize the onDeleteItem callback to prevent ShelfGrid from re-rendering
+  const removeItemRef = useRef(removeItem);
+  useEffect(() => {
+    removeItemRef.current = removeItem;
+  }, [removeItem]);
+
+  const handleDeleteItem = useCallback((id: string) => void removeItemRef.current(id), []);
 
   const barStyle = {
     ...glassStyle,
@@ -49,7 +58,7 @@ export function ShelfBar({
             </p>
           </div>
         ) : (
-          <ShelfGrid items={items} alignment={alignment} orientation={orientation} onDeleteItem={(id) => void removeItem(id)} />
+          <ShelfGrid items={items} alignment={alignment} orientation={orientation} onDeleteItem={handleDeleteItem} />
         )}
         <div className="shelf-bar__right-actions">
           <button
