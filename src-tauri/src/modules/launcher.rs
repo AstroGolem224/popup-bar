@@ -6,6 +6,7 @@
 //! Full implementation in Phase 2 (basic) / Phase 3 (advanced).
 
 use super::shelf_store::ItemType;
+#[allow(unused_imports)]
 use std::process::Command;
 use tauri::AppHandle;
 use tauri_plugin_shell::ShellExt;
