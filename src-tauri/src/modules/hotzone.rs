@@ -4,8 +4,6 @@
 //! enters the configurable hotzone at the top edge of the screen.
 //! Full implementation in Phase 1.
 
-use crate::modules::window_manager::BarRect;
-use crate::modules::config::ConfigManager;
 use log::{info, warn};
 use serde::{Deserialize, Serialize};
 use std::sync::{
@@ -15,7 +13,7 @@ use std::sync::{
 };
 use std::thread;
 use std::time::{Duration, Instant};
-use tauri::{AppHandle, Emitter};
+use tauri::{AppHandle, Emitter, Manager};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -218,9 +216,9 @@ impl HotzoneTracker {
             delay,
         );
 
-        let over_bar = app_handle.try_state::<crate::BarRectState>()
-            .and_then(|s| s.0.lock().ok())
-            .map(|r| r.contains(pos.x, pos.y))
+        let over_bar = app_handle.state::<crate::BarRectState>()
+            .0.lock().ok()
+            .map(|r: std::sync::MutexGuard<'_, crate::modules::window_manager::BarRect>| r.contains(pos.x, pos.y))
             .unwrap_or(false);
 
         let leave_suppressed = matches!(evaluation.action, HotzoneAction::Leave) && over_bar;
