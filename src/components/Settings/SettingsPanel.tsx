@@ -188,6 +188,9 @@ export function SettingsPanel({ className, onClose }: SettingsPanelProps) {
             value={settings.hotzoneSize}
             onChange={(e) => apply("hotzoneSize", Number(e.target.value))}
           />
+          <span className="settings-panel__hint">
+            {Number(settings.hotzoneSize || 5).toFixed(0)} px
+          </span>
         </label>
       </SettingsGroup>
 
@@ -230,6 +233,9 @@ export function SettingsPanel({ className, onClose }: SettingsPanelProps) {
             value={settings.animationSpeed}
             onChange={(e) => apply("animationSpeed", Number(e.target.value))}
           />
+          <span className="settings-panel__hint">
+            {Number(settings.animationSpeed || 1.0).toFixed(1)}x
+          </span>
         </label>
         <label className="settings-panel__field" title="Ausrichtung der Icons in der Leiste">
           <span>Ausrichtung</span>

@@ -1,0 +1,3 @@
+## 2024-05-18 - Safe UX Range Sliders
+**Learning:** React UI state derived from settings or local storage can be undefined or parsed as strings unexpectedly, which leads to `TypeError` crashes when chaining `.toFixed()`. Also, users often find naked range sliders lacking feedback on exact numerical adjustments.
+**Action:** When implementing range sliders (`<input type="range">`), always pair them with a `<span className="settings-panel__hint">` to display the exact current value. Enforce robust type casting with default fallbacks (e.g., `Number(settings.value || fallback).toFixed(n)`) when formatting values to prevent UI crashes.
