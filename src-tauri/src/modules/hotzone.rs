@@ -197,6 +197,7 @@ impl HotzoneTracker {
     }
 
     /// Stop listening for mouse events.
+    #[allow(dead_code)]
     pub fn stop(&mut self) -> Result<(), String> {
         if !self.is_active {
             return Ok(());
@@ -210,16 +211,19 @@ impl HotzoneTracker {
 
     /// Check if cursor is currently within the hotzone.
     /// Returns `true` while the tracker thread is running.
+    #[allow(dead_code)]
     pub fn is_cursor_in_hotzone(&self) -> bool {
         self.is_active
     }
 
     /// Update hotzone configuration at runtime.
+    #[allow(dead_code)]
     pub fn update_config(&mut self, config: HotzoneConfig) {
         self.config = config;
     }
 
     /// Whether the tracker is currently running.
+    #[allow(dead_code)]
     pub fn is_active(&self) -> bool {
         self.is_active
     }

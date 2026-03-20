@@ -21,21 +21,25 @@ pub struct MousePosition {
 /// Platform-agnostic interface for OS-level operations.
 pub trait PlatformProvider: Send + Sync {
     /// Register a hotzone listener at the top screen edge.
+    #[allow(dead_code)]
     fn register_hotzone(&self, height: u32) -> Result<(), String>;
 
     /// Remove the hotzone listener.
+    #[allow(dead_code)]
     fn unregister_hotzone(&self) -> Result<(), String>;
 
     /// Get the current mouse cursor position.
     fn get_mouse_position(&self) -> Result<MousePosition, String>;
 
     /// Apply window vibrancy/blur effect (platform-native).
+    #[allow(dead_code)]
     fn set_window_vibrancy(&self, blur_radius: f64, tint_color: &str) -> Result<(), String>;
 
     /// Extract an icon from a file, app, or URL target.
     fn extract_icon(&self, path: &str, size: u32) -> Result<Vec<u8>, String>;
 
     /// Launch an item using the platform's default handler.
+    #[allow(dead_code)]
     fn launch_item(&self, path: &str) -> Result<(), String>;
 }
 

@@ -10,6 +10,7 @@ use std::path::Path;
 
 /// The source of a drag operation.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[allow(dead_code)]
 pub enum DragSource {
     /// Item dragged from outside the app (e.g., desktop, file manager).
     External,
@@ -19,6 +20,7 @@ pub enum DragSource {
 
 /// Payload carried during a drag operation.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[allow(dead_code)]
 pub struct DragPayload {
     /// Where the drag originated.
     pub source: DragSource,
@@ -32,6 +34,7 @@ pub struct DragPayload {
 
 /// Result of a completed drop operation.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[allow(dead_code)]
 pub struct DropResult {
     /// Whether the drop was accepted.
     pub accepted: bool,
@@ -151,18 +154,21 @@ impl DndHandler {
     }
 
     /// Register drag-and-drop listeners on the window.
+    #[allow(dead_code)]
     pub fn register_listeners() -> Result<(), String> {
         info!("DndHandler: register_listeners (Phase 3 baseline)");
         Ok(())
     }
 
     /// Unregister drag-and-drop listeners.
+    #[allow(dead_code)]
     pub fn unregister_listeners() -> Result<(), String> {
         info!("DndHandler: unregister_listeners (stub — Phase 3)");
         Ok(())
     }
 
     /// Process a drop event and determine the result.
+    #[allow(dead_code)]
     pub fn handle_drop(_payload: DragPayload) -> Result<DropResult, String> {
         info!("DndHandler: handle_drop (Phase 3 baseline)");
         Ok(DropResult {

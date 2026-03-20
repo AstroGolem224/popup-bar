@@ -85,6 +85,7 @@ impl BarRect {
 /// Manages the popup bar window state and transitions.
 pub struct PopupWindowManager {
     state: WindowState,
+    #[allow(dead_code)]
     config: WindowConfig,
     next_transition_token: u64,
     pending_transition: Option<PendingTransition>,
@@ -219,6 +220,7 @@ impl PopupWindowManager {
 
     /// Reposition window to a specific monitor.
     /// Phase 5: Multi-monitor support.
+    #[allow(dead_code)]
     pub fn move_to_monitor(&mut self, monitor_index: usize) -> Result<(), String> {
         info!("WindowManager: move_to_monitor({monitor_index}) (stub — Phase 5)");
         self.config.monitor_index = monitor_index;
@@ -227,12 +229,14 @@ impl PopupWindowManager {
 
     /// Apply transparency and vibrancy effects.
     /// Handled in lib.rs setup via configure_window_vibrancy().
+    #[allow(dead_code)]
     pub fn apply_vibrancy(&self, _blur_intensity: f64, _tint_color: &str) -> Result<(), String> {
         info!("WindowManager: apply_vibrancy (stub — handled in lib.rs setup)");
         Ok(())
     }
 
     /// Get current window state.
+    #[allow(dead_code)]
     pub fn state(&self) -> &WindowState {
         &self.state
     }

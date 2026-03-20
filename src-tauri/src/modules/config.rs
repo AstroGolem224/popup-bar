@@ -113,6 +113,7 @@ impl ConfigManager {
     }
 
     /// Reset to defaults and return them.
+    #[allow(dead_code)]
     pub async fn reset() -> Result<AppSettings, String> {
         let defaults = AppSettings::default();
         Self::save(&defaults).await?;

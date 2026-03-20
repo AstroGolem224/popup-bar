@@ -158,6 +158,7 @@ impl IconResolver {
     }
 
     /// Clear the entire icon cache.
+    #[allow(dead_code)]
     pub fn clear_cache(&self) -> Result<(), String> {
         let cache_dir = PathBuf::from(&self.cache_dir);
         if cache_dir.exists() {
@@ -178,6 +179,7 @@ impl IconResolver {
     }
 
     /// Get the cache directory path.
+    #[allow(dead_code)]
     pub fn cache_dir(&self) -> &str {
         &self.cache_dir
     }

@@ -59,6 +59,7 @@ impl Launcher {
     ///
     /// Currently not implemented; reserved für eine spätere phase mit
     /// expliziter programmauswahl.
+    #[allow(dead_code)]
     pub fn open_with(_app: &AppHandle, _path: &str, _app_path: &str) -> Result<(), String> {
         info!("Launcher: open_with (stub — Phase 3)");
         Err("Launcher: open_with not implemented (Phase 3)".into())
@@ -69,6 +70,7 @@ impl Launcher {
     /// Delegiert aktuell an `open`, sodass das OS entscheidet, ob es
     /// ein reveal oder open ist. Eine spezialisierte implementation
     /// kann später ergänzt werden.
+    #[allow(dead_code)]
     pub fn reveal_in_file_manager(app: &AppHandle, path: &str) -> Result<(), String> {
         info!("Launcher: reveal_in_file_manager {}", path);
         if !Self::validate_target(path) {
