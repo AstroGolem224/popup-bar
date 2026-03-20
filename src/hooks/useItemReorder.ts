@@ -1,152 +1,225 @@
 /**
- * Hook: Mouse-event-based item reordering.
+ * Hook: persisted item positioning.
  *
- * Uses mousedown/mousemove/mouseup instead of HTML5 DnD to avoid
- * conflicts with Tauri's native dragDropEnabled on Windows/Webview2.
+ * Dragging updates a local preview immediately and commits the final
+ * item position once the mouse is released.
  */
-import { useCallback, useRef, useEffect, useState } from "react";
-import { useShelfStore } from "../stores/shelfStore";
-import { reorderShelfItems } from "../utils/tauri-bridge";
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { ShelfItem } from "../types/shelf";
 
-export interface UseItemReorderReturn {
-  /** Attach to the item's onMouseDown */
-  onReorderMouseDown: (itemId: string, event: React.MouseEvent) => void;
-  /** The ID of the item currently being dragged (for visual feedback). */
-  draggingId: string | null;
-  /** The ID of the item currently being hovered over as a drop target. */
-  dragOverId: string | null;
+export interface ItemPosition {
+  x: number;
+  y: number;
 }
 
-export function useItemReorder(): UseItemReorderReturn {
-  const draggedIdRef = useRef<string | null>(null);
-  const startPosRef = useRef<{ x: number; y: number } | null>(null);
-  const isDraggingRef = useRef(false);
-  const items = useShelfStore((state) => state.items);
-  const reorderItems = useShelfStore((state) => state.reorderItems);
-  const setError = useShelfStore((state) => state.setError);
+interface UseItemReorderOptions {
+  items: ShelfItem[];
+  resolvedPositions: Record<string, ItemPosition>;
+  containerSize: { width: number; height: number };
+  alignment: "centered" | "start" | "grid";
+  onCommitPosition: (itemId: string, position: ItemPosition) => Promise<void>;
+}
 
+export interface UseItemReorderReturn {
+  onReorderMouseDown: (itemId: string, event: React.MouseEvent) => void;
+  draggingId: string | null;
+  dragPositions: Record<string, ItemPosition>;
+  activationBlockedId: string | null;
+}
+
+const DRAG_THRESHOLD = 5;
+const ITEM_SIZE = 52;
+const GRID_STEP = 64;
+const MIN_MANUAL_Y = 1;
+
+interface ActiveDragState {
+  itemId: string;
+  mouseStart: { x: number; y: number };
+  itemStart: ItemPosition;
+  moved: boolean;
+}
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max);
+}
+
+function roundPosition(value: number) {
+  return Math.round(value * 10) / 10;
+}
+
+function normalizePosition(
+  position: ItemPosition,
+  containerSize: { width: number; height: number },
+  alignment: "centered" | "start" | "grid",
+): ItemPosition {
+  const maxX = Math.max(0, containerSize.width - ITEM_SIZE);
+  const maxY = Math.max(MIN_MANUAL_Y, containerSize.height - ITEM_SIZE);
+
+  let nextX = clamp(position.x, 0, maxX);
+  let nextY = clamp(position.y, MIN_MANUAL_Y, maxY);
+
+  if (alignment === "grid") {
+    nextX = clamp(Math.round(nextX / GRID_STEP) * GRID_STEP, 0, maxX);
+    nextY = clamp(Math.round(nextY / GRID_STEP) * GRID_STEP, MIN_MANUAL_Y, maxY);
+  }
+
+  return {
+    x: roundPosition(nextX),
+    y: roundPosition(nextY),
+  };
+}
+
+export function useItemReorder({
+  items,
+  resolvedPositions,
+  containerSize,
+  alignment,
+  onCommitPosition,
+}: UseItemReorderOptions): UseItemReorderReturn {
+  const activeDragRef = useRef<ActiveDragState | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
-  const [dragOverId, setDragOverId] = useState<string | null>(null);
+  const [dragPositions, setDragPositions] = useState<Record<string, ItemPosition>>({});
+  const [activationBlockedId, setActivationBlockedId] = useState<string | null>(null);
+  const blockResetTimerRef = useRef<number | null>(null);
+  const mouseMoveHandlerRef = useRef<(event: MouseEvent) => void>(() => {});
+  const mouseUpHandlerRef = useRef<(event: MouseEvent) => void>(() => {});
 
-  const DRAG_THRESHOLD = 5; // pixels before drag starts
-
-  const findItemElementAt = useCallback((x: number, y: number): string | null => {
-    // 1. Find the element at the point
-    let el = document.elementFromPoint(x, y);
-    
-    // 2. Search upwards to find a shelf item container
-    while (el instanceof HTMLElement) {
-      if (el.dataset.shelfItemId) {
-        return el.dataset.shelfItemId;
-      }
-      el = el.parentElement;
-    }
-    return null;
+  const clearInteractionStyles = useCallback(() => {
+    document.body.style.cursor = "";
+    document.body.style.userSelect = "";
   }, []);
 
-  const handleMouseMoveRef = useRef<(e: MouseEvent) => void>(() => {});
-  const handleMouseUpRef = useRef<(e: MouseEvent) => void>(() => {});
+  const releaseActivationBlock = useCallback(() => {
+    if (blockResetTimerRef.current != null) {
+      window.clearTimeout(blockResetTimerRef.current);
+      blockResetTimerRef.current = null;
+    }
+  }, []);
 
-  handleMouseMoveRef.current = (e: MouseEvent) => {
-    if (!draggedIdRef.current || !startPosRef.current) return;
+  mouseMoveHandlerRef.current = (event: MouseEvent) => {
+    const activeDrag = activeDragRef.current;
+    if (!activeDrag) {
+      return;
+    }
 
-    const dx = Math.abs(e.clientX - startPosRef.current.x);
-    const dy = Math.abs(e.clientY - startPosRef.current.y);
+    const deltaX = event.clientX - activeDrag.mouseStart.x;
+    const deltaY = event.clientY - activeDrag.mouseStart.y;
 
-    // Start dragging after threshold
-    if (!isDraggingRef.current && (dx > DRAG_THRESHOLD || dy > DRAG_THRESHOLD)) {
-      console.log(`[reorder] Drag STARTED for item: ${draggedIdRef.current}`);
-      isDraggingRef.current = true;
-      setDraggingId(draggedIdRef.current);
+    if (!activeDrag.moved && Math.hypot(deltaX, deltaY) <= DRAG_THRESHOLD) {
+      return;
+    }
+
+    if (!activeDrag.moved) {
+      activeDrag.moved = true;
+      setDraggingId(activeDrag.itemId);
       document.body.style.cursor = "grabbing";
       document.body.style.userSelect = "none";
     }
 
-    if (isDraggingRef.current) {
-      const targetId = findItemElementAt(e.clientX, e.clientY);
-      if (targetId && targetId !== draggedIdRef.current) {
-        if (dragOverId !== targetId) {
-          console.log(`[reorder] Hovering OVER target: ${targetId}`);
-          setDragOverId(targetId);
-        }
-      } else if (dragOverId) {
-        setDragOverId(null);
-      }
-    }
+    const nextPosition = normalizePosition(
+      {
+        x: activeDrag.itemStart.x + deltaX,
+        y: activeDrag.itemStart.y + deltaY,
+      },
+      containerSize,
+      alignment,
+    );
+
+    setDragPositions((previous) => ({
+      ...previous,
+      [activeDrag.itemId]: nextPosition,
+    }));
   };
 
-  handleMouseUpRef.current = async (e: MouseEvent) => {
+  mouseUpHandlerRef.current = () => {
     document.removeEventListener("mousemove", mouseMoveWrapper);
     document.removeEventListener("mouseup", mouseUpWrapper);
-    document.body.style.cursor = "";
-    document.body.style.userSelect = "";
+    clearInteractionStyles();
 
-    if (isDraggingRef.current && draggedIdRef.current) {
-      const targetId = findItemElementAt(e.clientX, e.clientY);
-      if (targetId && targetId !== draggedIdRef.current) {
-        const currentIds = items.map((item) => item.id);
-        const fromIndex = currentIds.indexOf(draggedIdRef.current);
-        const targetIndex = currentIds.indexOf(targetId);
+    const activeDrag = activeDragRef.current;
+    activeDragRef.current = null;
 
-        if (fromIndex >= 0 && targetIndex >= 0) {
-          const reorderedIds = [...currentIds];
-          reorderedIds.splice(fromIndex, 1);
-          reorderedIds.splice(targetIndex, 0, draggedIdRef.current);
-
-          reorderItems(reorderedIds);
-          try {
-            await reorderShelfItems(reorderedIds);
-          } catch (error) {
-            console.warn("reorder_shelf_items failed", error);
-            reorderItems(currentIds);
-            setError("Reihenfolge konnte nicht gespeichert werden");
-          }
-        }
-      }
+    if (!activeDrag) {
+      setDraggingId(null);
+      return;
     }
 
-    draggedIdRef.current = null;
-    startPosRef.current = null;
-    isDraggingRef.current = false;
+    const nextPosition = normalizePosition(
+      dragPositions[activeDrag.itemId] ?? activeDrag.itemStart,
+      containerSize,
+      alignment,
+    );
+
+    if (activeDrag.moved) {
+      setActivationBlockedId(activeDrag.itemId);
+      releaseActivationBlock();
+      blockResetTimerRef.current = window.setTimeout(() => {
+        setActivationBlockedId((current) => (current === activeDrag.itemId ? null : current));
+        blockResetTimerRef.current = null;
+      }, 180);
+
+      void onCommitPosition(activeDrag.itemId, nextPosition).finally(() => {
+        setDragPositions((previous) => {
+          const { [activeDrag.itemId]: _removed, ...rest } = previous;
+          return rest;
+        });
+      });
+    }
+
     setDraggingId(null);
-    setDragOverId(null);
   };
 
-  // Stable wrappers for addEventListener/removeEventListener
-  const mouseMoveWrapper = useCallback((e: Event) => {
-    handleMouseMoveRef.current(e as MouseEvent);
+  const mouseMoveWrapper = useCallback((event: Event) => {
+    mouseMoveHandlerRef.current(event as MouseEvent);
   }, []);
 
-  const mouseUpWrapper = useCallback((e: Event) => {
-    void handleMouseUpRef.current(e as MouseEvent);
+  const mouseUpWrapper = useCallback((event: Event) => {
+    mouseUpHandlerRef.current(event as MouseEvent);
   }, []);
 
-  const onReorderMouseDown = useCallback((itemId: string, event: React.MouseEvent) => {
-    // Only primary mouse button
-    if (event.button !== 0) return;
-    event.preventDefault();
+  const onReorderMouseDown = useCallback(
+    (itemId: string, event: React.MouseEvent) => {
+      if (event.button !== 0) {
+        return;
+      }
 
-    draggedIdRef.current = itemId;
-    startPosRef.current = { x: event.clientX, y: event.clientY };
-    isDraggingRef.current = false;
+      const item = items.find((entry) => entry.id === itemId);
+      if (!item) {
+        return;
+      }
 
-    document.addEventListener("mousemove", mouseMoveWrapper);
-    document.addEventListener("mouseup", mouseUpWrapper);
-  }, [mouseMoveWrapper, mouseUpWrapper]);
+      event.preventDefault();
+      const itemStart = dragPositions[itemId] ?? resolvedPositions[itemId] ?? {
+        x: item.position.x,
+        y: Math.max(item.position.y, MIN_MANUAL_Y),
+      };
 
-  // Cleanup listener on unmount
+      activeDragRef.current = {
+        itemId,
+        mouseStart: { x: event.clientX, y: event.clientY },
+        itemStart,
+        moved: false,
+      };
+
+      document.addEventListener("mousemove", mouseMoveWrapper);
+      document.addEventListener("mouseup", mouseUpWrapper);
+    },
+    [dragPositions, items, mouseMoveWrapper, mouseUpWrapper, resolvedPositions],
+  );
+
   useEffect(() => {
     return () => {
       document.removeEventListener("mousemove", mouseMoveWrapper);
       document.removeEventListener("mouseup", mouseUpWrapper);
-      document.body.style.cursor = "";
-      document.body.style.userSelect = "";
+      clearInteractionStyles();
+      releaseActivationBlock();
     };
-  }, [mouseMoveWrapper, mouseUpWrapper]);
+  }, [clearInteractionStyles, mouseMoveWrapper, mouseUpWrapper, releaseActivationBlock]);
 
   return {
     onReorderMouseDown,
     draggingId,
-    dragOverId,
+    dragPositions,
+    activationBlockedId,
   };
 }

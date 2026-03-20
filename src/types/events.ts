@@ -13,6 +13,7 @@ export const EVENTS = {
   SETTINGS_CHANGED: "settings:changed",
   WINDOW_SHOW: "window:show",
   WINDOW_HIDE: "window:hide",
+  TOGGLE_VISIBILITY: "system:toggle-visibility",
   DND_DROP: "dnd:drop",
 } as const;
 
@@ -30,5 +31,6 @@ export interface EventPayloads {
   [EVENTS.SETTINGS_CHANGED]: Settings;
   [EVENTS.WINDOW_SHOW]: undefined;
   [EVENTS.WINDOW_HIDE]: undefined;
+  [EVENTS.TOGGLE_VISIBILITY]: undefined;
   [EVENTS.DND_DROP]: { paths: string[]; x: number; y: number };
 }

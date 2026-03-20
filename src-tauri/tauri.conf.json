@@ -2,7 +2,7 @@
   "$schema": "https://raw.githubusercontent.com/tauri-apps/tauri/dev/crates/tauri-config-schema/schema.json",
   "productName": "Popup Bar",
   "version": "0.1.0",
-  "identifier": "com.popup-bar.app",
+  "identifier": "com.popupbar.desktop",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:1420",
@@ -37,10 +37,28 @@
     ]
   },
   "bundle": {
+    "publisher": "Popup Bar Contributors",
+    "category": "Utility",
+    "shortDescription": "Popup launcher bar with hotzone trigger and persistent shelf items.",
+    "longDescription": "Popup Bar is a desktop launcher built with Tauri that reveals itself from the screen edge, stores pinned files and apps in SQLite, and ships with a production MSI build flow.",
+    "copyright": "Copyright (c) 2026 Popup Bar Contributors",
+    "license": "MIT",
+    "licenseFile": "../LICENSE",
+    "useLocalToolsDir": true,
     "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "targets": ["msi", "dmg", "appimage", "deb"]
+    "targets": ["msi", "dmg", "appimage", "deb"],
+    "windows": {
+      "wix": {
+        "upgradeCode": "f9945b89-3d67-564d-ac2d-5ef406e4c7dd",
+        "language": "en-US"
+      }
+    }
   },
   "plugins": {
     "sql": {

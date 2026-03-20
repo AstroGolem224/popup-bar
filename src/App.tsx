@@ -7,7 +7,7 @@ import { useSettingsStore } from "./stores/settingsStore";
 import { DEFAULT_SETTINGS } from "./types/settings";
 import { getPlatformInfo, getSettings, listSkins, listen, getCurrentWindow } from "./utils/tauri-bridge";
 import type { Settings } from "./types/settings";
-import { useEffect, useState } from "react";
+import { startTransition, useEffect, useState } from "react";
 import "./App.css";
 import "./styles/animations.css";
 import "./styles/glassmorphism.css";
@@ -24,25 +24,39 @@ function App() {
   const clearError = useShelfStore((state) => state.clearError);
   const setSettings = useSettingsStore((state) => state.setSettings);
   const setSkins = useSettingsStore((state) => state.setSkins);
+  const [windowLabel] = useState<string>(() => getCurrentWindow().label);
 
   useEffect(() => {
+    let isMounted = true;
+
     Promise.all([getSettings(), listSkins()])
       .then(([settings, skins]) => {
-        setSettings({ ...DEFAULT_SETTINGS, ...settings });
-        setSkins(skins);
+        if (!isMounted) {
+          return;
+        }
+
+        startTransition(() => {
+          setSettings({ ...DEFAULT_SETTINGS, ...settings });
+          setSkins(skins);
+        });
       })
       .catch(() => {});
+
+    return () => {
+      isMounted = false;
+    };
   }, [setSettings, setSkins]);
 
   useEffect(() => {
     const unlisten = listen<Settings>("settings_changed", (event) => {
-      setSettings({ ...DEFAULT_SETTINGS, ...event.payload });
-      listSkins().then(setSkins).catch(() => {});
+      startTransition(() => {
+        setSettings({ ...DEFAULT_SETTINGS, ...event.payload });
+      });
     });
     return () => {
       unlisten.then((fn) => fn());
     };
-  }, [setSettings, setSkins]);
+  }, [setSettings]);
 
   useEffect(() => {
     getPlatformInfo()
@@ -50,13 +64,6 @@ function App() {
         document.body.classList.add(`platform-${info.os}`);
       })
       .catch(() => {});
-  }, []);
-
-  const [windowLabel, setWindowLabel] = useState<string>("main");
-
-  useEffect(() => {
-    const label = getCurrentWindow().label;
-    setWindowLabel(label);
   }, []);
 
   useEffect(() => {

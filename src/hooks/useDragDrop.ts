@@ -20,18 +20,15 @@ interface UseDragDropReturn {
 export function useDragDrop(): UseDragDropReturn {
   const [isDragOver, setIsDragOver] = useState(false);
   const [dragHint, setDragHint] = useState("Dateien, Ordner oder Links hier ablegen");
-  const addItems = useShelfStore((state) => state.addItems);
   const addItem = useShelfStore((state) => state.addItem);
   const setError = useShelfStore((state) => state.setError);
-  const [windowLabel, setWindowLabel] = useState("main");
-
-  useEffect(() => {
+  const [windowLabel] = useState(() => {
     try {
-      setWindowLabel(getCurrentWebviewWindow().label);
-    } catch (e) {
-      console.warn("[drag-drop] Failed to detect window label", e);
+      return getCurrentWebviewWindow().label;
+    } catch {
+      return "main";
     }
-  }, []);
+  });
 
   const inferDragHint = (event: DragEvent) => {
     const types = Array.from(event.dataTransfer?.types ?? []);
@@ -85,7 +82,7 @@ export function useDragDrop(): UseDragDropReturn {
       console.warn("drop handling failed", error);
       setError(msg);
     }
-  }, [addItem, addItems, setError]);
+  }, [addItem, setError, windowLabel]);
 
   // Tauri native drag-drop (files, folders, app shortcuts)
   // MOVED TO RUST (lib.rs) to ensure consistent behavior across all bar windows

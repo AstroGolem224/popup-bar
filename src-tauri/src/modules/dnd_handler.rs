@@ -3,6 +3,8 @@
 //! Manages drag-and-drop interactions for adding items to the shelf,
 //! reordering existing items, and grouping items together.
 
+#![allow(dead_code)]
+
 use crate::modules::shelf_store::{ItemType, ShelfItem, ShelfStore};
 use log::{info, warn};
 use serde::{Deserialize, Serialize};

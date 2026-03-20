@@ -6,11 +6,13 @@
  * Icons loaded via get_icon_data (base64) to avoid asset protocol scope.
  */
 import type { ShelfItem as ShelfItemType } from "../../types/shelf";
+import type { CSSProperties } from "react";
 import { useEffect, useRef, useState } from "react";
 import {
   getIconDataUrl,
   openShelfItemViaLauncher,
 } from "../../utils/tauri-bridge";
+import { getCachedDataUrl } from "../../utils/media-cache";
 import "./ShelfItem.css";
 
 const ACTIVATE_DEBOUNCE_MS = 400;
@@ -26,6 +28,10 @@ export interface ShelfItemProps {
   onReorderMouseDown?: (id: string, event: React.MouseEvent) => void;
   /** Callback when delete (X) is clicked. */
   onDelete?: (id: string) => void | Promise<void>;
+  /** Inline positioning style from the layout system. */
+  style?: CSSProperties;
+  /** Suppresses accidental open directly after dragging. */
+  activationBlocked?: boolean;
 }
 
 export function ShelfItem({
@@ -34,18 +40,39 @@ export function ShelfItem({
   isDragOver = false,
   onReorderMouseDown,
   onDelete,
+  style,
+  activationBlocked = false,
 }: ShelfItemProps) {
   const [iconLoadFailed, setIconLoadFailed] = useState(false);
   const [iconDataUrl, setIconDataUrl] = useState<string | null>(null);
   const lastActivateRef = useRef(0);
 
   useEffect(() => {
+    let isMounted = true;
+
     setIconLoadFailed(false);
     setIconDataUrl(null);
-    if (!item.iconCacheKey) return;
-    getIconDataUrl(item.iconCacheKey)
-      .then(setIconDataUrl)
-      .catch(() => setIconLoadFailed(true));
+    if (!item.iconCacheKey) {
+      return () => {
+        isMounted = false;
+      };
+    }
+
+    getCachedDataUrl(`icon:${item.iconCacheKey}`, () => getIconDataUrl(item.iconCacheKey))
+      .then((url) => {
+        if (isMounted) {
+          setIconDataUrl(url);
+        }
+      })
+      .catch(() => {
+        if (isMounted) {
+          setIconLoadFailed(true);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
   }, [item.iconCacheKey]);
 
   const fallbackIcon = item.itemType === "folder"
@@ -57,6 +84,7 @@ export function ShelfItem({
         : "📄";
 
   const handleActivate = async () => {
+    if (activationBlocked) return;
     const now = Date.now();
     if (now - lastActivateRef.current < ACTIVATE_DEBOUNCE_MS) return;
     lastActivateRef.current = now;
@@ -78,6 +106,7 @@ export function ShelfItem({
   return (
     <div
       className={classNames}
+      style={style}
       data-shelf-item-id={item.id}
       title={item.displayName}
       tabIndex={0}

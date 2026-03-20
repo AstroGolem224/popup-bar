@@ -1,13 +1,15 @@
-## Beitrag leisten
+## beitrag leisten
 
-- Repo klonen und Dependencies installieren (`npm install`, Rust Toolchain stable)
-- Vor Änderungen:
-  - `cd src-tauri && cargo test`
-  - `npm run build`
-- Neues Feature:
-  - Architektur‑Plan in `docs/architecture/IMPLEMENTATION_PLAN.md` prüfen
-  - Falls Scope ändert: Plan + `NEXT_PHASE_REVIEW.md` mit anpassen
-- Vor Pull‑Request:
-  - Alle Tests grün (Rust + Frontend)
-  - `npm run build` ohne Warnungen
-
+1. repo klonen und dependencies installieren:
+   `npm install`
+2. vor änderungen immer den plan lesen:
+   `docs/architecture/IMPLEMENTATION_PLAN.md`
+3. lokale checks vor jedem pr:
+   `npm test`
+   `npm run build`
+   `cargo test --manifest-path src-tauri/Cargo.toml`
+   `cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings`
+4. wenn du den installer anfässt:
+   `.\scripts\build-installer.ps1`
+5. release-flow und artifact-pfade stehen in:
+   `docs/release/INSTALLER.md`

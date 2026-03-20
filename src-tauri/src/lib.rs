@@ -8,31 +8,35 @@ mod modules;
 
 use commands::{shelf_commands, settings_commands, system_commands};
 use log::{info, warn};
-use modules::config::ConfigManager;
+use modules::config::{AppSettings, ConfigManager};
 use modules::hotzone::{HotzoneConfig, HotzoneTracker};
 use modules::shelf_store::ShelfStore;
 use modules::window_manager::{BarRect, PopupWindowManager, WindowConfig};
-use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use std::sync::{Mutex, RwLock};
 use tauri::Manager;
 
 pub struct ManagerState(pub Mutex<PopupWindowManager>);
 pub struct BarRectState(pub Mutex<BarRect>);
+pub struct SettingsState(pub RwLock<AppSettings>);
+pub struct TrayState(pub tauri::menu::MenuItem<tauri::Wry>);
+pub(crate) struct LastMonitorState(pub Mutex<Option<system_commands::MonitorSnapshot>>);
+
+const TRAY_TOGGLE_ID: &str = "tray_toggle";
+const TRAY_SETTINGS_ID: &str = "tray_settings";
+const TRAY_QUIT_ID: &str = "tray_quit";
+const TRAY_SHOW_LABEL: &str = "Show Popup Bar";
+const TRAY_HIDE_LABEL: &str = "Hide Popup Bar";
 
 /// Initialize and run the Tauri application.
 pub fn run() {
     // Set up logging to both stderr AND a log file in the project directory
     let log_dir = {
-        // Try well-known project dir first, then fall back to exe dir
-        let project_dir = std::path::PathBuf::from(r"C:\Users\matth\OneDrive\Dokumente\GitHub\popup-bar\popup-bar");
-        if project_dir.is_dir() {
-            project_dir
-        } else {
-            std::env::current_exe()
-                .ok()
-                .and_then(|p| p.parent().map(|p| p.to_path_buf()))
-                .unwrap_or_else(std::env::temp_dir)
-        }
+        // Use current executable directory as default for logs in development/portable mode
+        std::env::current_exe()
+            .ok()
+            .and_then(|p| p.parent().map(|p| p.to_path_buf()))
+            .or_else(|| std::env::current_dir().ok())
+            .unwrap_or_else(|| std::path::PathBuf::from("."))
     };
     let date_str = chrono::Local::now().format("%Y-%m-%d").to_string();
     // Find next available sequence number
@@ -58,9 +62,9 @@ pub fn run() {
         std::env::set_var("RUST_LOG", "info");
     }
 
-    let file_for_logger = log_file.map(|f| std::sync::Mutex::new(f));
+    let file_for_logger = log_file.map(std::sync::Mutex::new);
     let file_arc: Option<std::sync::Arc<std::sync::Mutex<std::fs::File>>> =
-        file_for_logger.map(|m| std::sync::Arc::new(m));
+        file_for_logger.map(std::sync::Arc::new);
     let file_arc_clone = file_arc.clone();
 
     env_logger::Builder::from_default_env()
@@ -94,6 +98,15 @@ pub fn run() {
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
             None,
         ))
+        .plugin(
+            tauri_plugin_global_shortcut::Builder::new()
+                .with_handler(|app, _shortcut, event| {
+                    if event.state == tauri_plugin_global_shortcut::ShortcutState::Pressed {
+                        let _ = system_commands::emit_toggle_visibility(app);
+                    }
+                })
+                .build(),
+        )
         .invoke_handler(tauri::generate_handler![
             settings_commands::set_launch_at_login,
             shelf_commands::get_shelf_items,
@@ -139,9 +152,11 @@ pub fn run() {
 
             let manager_mutex = Mutex::new(PopupWindowManager::new(WindowConfig::default()));
             app.manage(ManagerState(manager_mutex));
+            app.manage(LastMonitorState(Mutex::new(None)));
 
             let settings = tauri::async_runtime::block_on(ConfigManager::load())
                 .unwrap_or_default();
+            app.manage(SettingsState(RwLock::new(settings.clone())));
             
             let mut hotzone_tracker = HotzoneTracker::new(HotzoneConfig {
                 size: settings.hotzone_size,
@@ -183,6 +198,8 @@ pub fn run() {
             }
 
             app.manage(Mutex::new(hotzone_tracker));
+            setup_tray(app)?;
+            sync_global_shortcut(app.handle(), "", &settings.global_shortcut)?;
 
             // info!("Window configured"); // Removed
             Ok(())
@@ -228,31 +245,123 @@ fn setup_drop_handler(app: &tauri::AppHandle, window: &tauri::WebviewWindow) {
     let app_handle = app.clone();
     
     window.on_window_event(move |event| {
-        if let tauri::WindowEvent::DragDrop(drag_event) = event {
-            match drag_event {
-                tauri::DragDropEvent::Drop { paths, .. } => {
-                    let label = win_label.clone();
-                    let path_strings: Vec<String> = paths.iter()
-                        .filter_map(|p| p.to_str().map(|s| s.to_string()))
-                        .collect();
-                    
-                    if !path_strings.is_empty() {
-                        let handle = app_handle.clone();
-                        let container = "main";
-                        tauri::async_runtime::spawn(async move {
-                            match crate::commands::shelf_commands::add_dropped_paths(path_strings, Some(container.to_string())).await {
-                                Ok(items) => {
-                                    // Emit event so all windows refresh their shelf items
-                                    use tauri::Emitter;
-                                    let _ = handle.emit("shelf_items_changed", ());
-                                }
-                                Err(e) => warn!("[drop-handler] {} add_dropped_paths failed: {}", label, e),
-                            }
-                        });
+        if let tauri::WindowEvent::DragDrop(tauri::DragDropEvent::Drop { paths, .. }) = event {
+            let label = win_label.clone();
+            let path_strings: Vec<String> = paths.iter()
+                .filter_map(|p| p.to_str().map(|s| s.to_string()))
+                .collect();
+            
+            if !path_strings.is_empty() {
+                let handle = app_handle.clone();
+                let container = "main";
+                tauri::async_runtime::spawn(async move {
+                    match crate::commands::shelf_commands::add_dropped_paths(handle.clone(), path_strings, Some(container.to_string())).await {
+                        Ok(_) => {
+                            // Emit event so all windows refresh their shelf items
+                            use tauri::Emitter;
+                            let _ = handle.emit("shelf_items_changed", ());
+                        }
+                        Err(e) => warn!("[drop-handler] {} add_dropped_paths failed: {}", label, e),
                     }
-                }
-                _ => {}
+                });
             }
         }
     });
+}
+
+fn setup_tray(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
+    use tauri::menu::{MenuBuilder, MenuItemBuilder};
+    use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
+
+    let Some(icon) = app.default_window_icon().cloned() else {
+        warn!("Skipping tray setup because no default window icon is available");
+        return Ok(());
+    };
+
+    let toggle_item = MenuItemBuilder::with_id(TRAY_TOGGLE_ID, TRAY_SHOW_LABEL).build(app)?;
+    let settings_item = MenuItemBuilder::with_id(TRAY_SETTINGS_ID, "Settings").build(app)?;
+    let quit_item = MenuItemBuilder::with_id(TRAY_QUIT_ID, "Quit").build(app)?;
+
+    let menu = MenuBuilder::new(app)
+        .item(&toggle_item)
+        .item(&settings_item)
+        .separator()
+        .item(&quit_item)
+        .build()?;
+
+    app.manage(TrayState(toggle_item));
+
+    TrayIconBuilder::with_id("main-tray")
+        .menu(&menu)
+        .icon(icon)
+        .tooltip("Popup Bar")
+        .show_menu_on_left_click(false)
+        .on_menu_event(|app, event| match event.id().as_ref() {
+            TRAY_TOGGLE_ID => {
+                let _ = system_commands::emit_toggle_visibility(app);
+            }
+            TRAY_SETTINGS_ID => {
+                let app_handle = app.clone();
+                tauri::async_runtime::spawn(async move {
+                    let _ = system_commands::open_settings_window(&app_handle, true);
+                });
+            }
+            TRAY_QUIT_ID => app.exit(0),
+            _ => {}
+        })
+        .on_tray_icon_event(|tray, event| {
+            if let TrayIconEvent::Click {
+                button: MouseButton::Left,
+                button_state: MouseButtonState::Up,
+                ..
+            } = event
+            {
+                let _ = system_commands::emit_toggle_visibility(tray.app_handle());
+            }
+        })
+        .build(app)?;
+
+    Ok(())
+}
+
+pub(crate) fn sync_global_shortcut(
+    app: &tauri::AppHandle,
+    previous_shortcut: &str,
+    next_shortcut: &str,
+) -> Result<(), String> {
+    use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut};
+    use std::str::FromStr;
+
+    let previous_shortcut = previous_shortcut.trim();
+    let next_shortcut = next_shortcut.trim();
+
+    if previous_shortcut == next_shortcut {
+        return Ok(());
+    }
+
+    let manager = app.global_shortcut();
+
+    if !next_shortcut.is_empty() {
+        Shortcut::from_str(next_shortcut).map_err(|e| e.to_string())?;
+        manager.register(next_shortcut).map_err(|e| e.to_string())?;
+    }
+
+    if !previous_shortcut.is_empty() {
+        let _ = manager.unregister(previous_shortcut);
+    }
+
+    Ok(())
+}
+
+pub(crate) fn update_tray_toggle_label(app: &tauri::AppHandle, wants_visible: bool) -> Result<(), String> {
+    let label = if wants_visible {
+        TRAY_HIDE_LABEL
+    } else {
+        TRAY_SHOW_LABEL
+    };
+
+    app.state::<TrayState>()
+        .0
+        .set_text(label)
+        .map_err(|e| e.to_string())
 }

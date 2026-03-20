@@ -21,44 +21,59 @@ export function useHotzoneState(): HotzoneState {
   const isVisibleRef = useRef(isVisible);
   const pendingShowTokenRef = useRef<number | null>(null);
   const pendingHideTokenRef = useRef<number | null>(null);
+  const [windowLabel] = useState(() => getCurrentWindow().label);
 
   useEffect(() => {
     isVisibleRef.current = isVisible;
   }, [isVisible]);
 
+  const requestShow = useCallback(async () => {
+    setIsVisible(true);
+    try {
+      pendingHideTokenRef.current = null;
+      pendingShowTokenRef.current = await showWindow();
+    } catch (error) {
+      console.warn("show_window failed", error);
+    }
+  }, []);
+
+  const requestHide = useCallback(async () => {
+    setIsVisible(false);
+    try {
+      pendingShowTokenRef.current = null;
+      pendingHideTokenRef.current = await hideWindow();
+    } catch (error) {
+      console.warn("hide_window failed", error);
+    }
+  }, []);
+
   useEffect(() => {
     let unlistenEnter: (() => void) | null = null;
     let unlistenLeave: (() => void) | null = null;
+    let unlistenToggle: (() => void) | null = null;
 
     const setup = async () => {
-      const label = getCurrentWindow().label;
-      const targetEdge = label === "main" ? "top" : label;
-      console.log(`[hotzone] window="${label}" listening for edge="${targetEdge}"`);
+      const targetEdge = windowLabel === "main" ? "top" : windowLabel;
 
       unlistenEnter = await listen<{ edge: string }>(EVENTS.HOTZONE_ENTER, async (event) => {
-        console.log(`[hotzone] window="${label}" received ENTER edge="${event.payload.edge}" (want="${targetEdge}")`);
         if (event.payload.edge !== targetEdge) return;
-        setIsVisible(true);
-        try {
-          pendingHideTokenRef.current = null;
-          const token = await showWindow();
-          pendingShowTokenRef.current = token;
-        } catch (error) {
-          console.warn("show_window failed", error);
-        }
+        await requestShow();
       });
 
       unlistenLeave = await listen<{ edge: string }>(EVENTS.HOTZONE_LEAVE, async (event) => {
         if (event.payload.edge !== targetEdge) return;
-        console.log(`[hotzone] leave edge: ${event.payload.edge}`);
-        setIsVisible(false);
-        try {
-          pendingShowTokenRef.current = null;
-          pendingHideTokenRef.current = await hideWindow();
-        } catch (error) {
-          console.warn("hide_window failed", error);
-        }
+        await requestHide();
       });
+
+      if (windowLabel === "main") {
+        unlistenToggle = await listen(EVENTS.TOGGLE_VISIBILITY, async () => {
+          if (isVisibleRef.current) {
+            await requestHide();
+          } else {
+            await requestShow();
+          }
+        });
+      }
     };
 
     void setup();
@@ -66,8 +81,9 @@ export function useHotzoneState(): HotzoneState {
     return () => {
       unlistenEnter?.();
       unlistenLeave?.();
+      unlistenToggle?.();
     };
-  }, []);
+  }, [requestHide, requestShow, windowLabel]);
 
   const onShelfAnimationEnd = useCallback(async () => {
     try {

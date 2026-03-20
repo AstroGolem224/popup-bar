@@ -4,7 +4,6 @@
 //! APIs. Caches extracted icons to disk for fast subsequent lookups.
 
 use crate::modules::platform::create_provider;
-use log::info;
 use serde::{Deserialize, Serialize};
 use sqlx::Row;
 use std::collections::hash_map::DefaultHasher;
@@ -66,15 +65,15 @@ impl IconResolver {
             let source_path: String = existing_row
                 .try_get("source_path")
                 .unwrap_or_else(|_| String::new());
-            if Path::new(&existing_path).exists() {
-                if source_path.is_empty() || Path::new(&source_path).exists() {
-                    return Ok(CachedIcon {
-                        cache_key,
-                        path: existing_path,
-                        format: IconFormat::Png,
-                        size: 256,
-                    });
-                }
+            if Path::new(&existing_path).exists()
+                && (source_path.is_empty() || Path::new(&source_path).exists())
+            {
+                return Ok(CachedIcon {
+                    cache_key,
+                    path: existing_path,
+                    format: IconFormat::Png,
+                    size: 256,
+                });
             }
             let _ = self.evict(&cache_key);
             let _ = sqlx::query("DELETE FROM icon_cache WHERE hash = ?1")
@@ -153,6 +152,7 @@ impl IconResolver {
     }
 
     /// Clear the entire icon cache.
+    #[allow(dead_code)]
     pub fn clear_cache(&self) -> Result<(), String> {
         let cache_dir = PathBuf::from(&self.cache_dir);
         if cache_dir.exists() {
@@ -173,6 +173,7 @@ impl IconResolver {
     }
 
     /// Get the cache directory path.
+    #[allow(dead_code)]
     pub fn cache_dir(&self) -> &str {
         &self.cache_dir
     }

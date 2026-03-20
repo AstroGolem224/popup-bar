@@ -94,7 +94,9 @@ function getMockValue<T>(command: string): T {
     tintColor: "rgba(255, 255, 255, 0.1)",
     theme: "system",
     autostart: false,
+    globalShortcut: "CommandOrControl+Shift+Space",
     multiMonitor: false,
+    monitorStrategy: "primary",
     barWidthPx: 480,
     barHeightPx: 72,
     activeSkin: null,
@@ -246,9 +248,8 @@ export async function deleteSkin(filename: string): Promise<Settings> {
 
 /** Returns a base64 data URL for a skin image file. */
 export async function getSkinDataUrl(filename: string): Promise<string | null> {
-  console.log("[skin] getSkinDataUrl called with:", filename);
   return invoke<string>("get_skin_data", { filename }).catch((err) => {
-    console.error("[skin] get_skin_data FAILED for", filename, err);
+    console.error("[skin] get_skin_data failed for", filename, err);
     return null;
   });
 }

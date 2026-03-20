@@ -18,7 +18,7 @@ export function ShelfBar({
   onAnimationComplete,
   orientation = "horizontal"
 }: ShelfBarProps) {
-  const { items, removeItem } = useShelfItems();
+  const { items, removeItem, updateItem } = useShelfItems();
   const glassStyle = useGlassmorphism();
   const animationSpeed = useSettingsStore((s) => s.settings.animationSpeed);
   const visibilityClass = isVisible ? "shelf-bar--visible" : "shelf-bar--hidden";
@@ -49,7 +49,13 @@ export function ShelfBar({
             </p>
           </div>
         ) : (
-          <ShelfGrid items={items} alignment={alignment} orientation={orientation} onDeleteItem={(id) => void removeItem(id)} />
+          <ShelfGrid
+            items={items}
+            alignment={alignment}
+            orientation={orientation}
+            onDeleteItem={(id) => void removeItem(id)}
+            onUpdateItem={(item) => updateItem(item)}
+          />
         )}
         <div className="shelf-bar__right-actions">
           <button

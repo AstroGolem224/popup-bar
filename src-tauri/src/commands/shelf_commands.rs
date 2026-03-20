@@ -10,6 +10,7 @@ use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
 use log::{info, warn};
 use std::path::Path;
 use std::str::FromStr;
+use tauri::{AppHandle, Manager};
 use uuid::Uuid;
 
 #[tauri::command]
@@ -24,15 +25,10 @@ pub async fn get_shelf_items(container: Option<String>) -> Result<Vec<ShelfItem>
 }
 
 #[tauri::command]
-pub async fn add_shelf_item(path: String, item_type: String, container: Option<String>) -> Result<ShelfItem, String> {
+pub async fn add_shelf_item(app: AppHandle, path: String, item_type: String, container: Option<String>) -> Result<ShelfItem, String> {
     let parsed_type = ItemType::from_str(&item_type)?;
     let mut item = ShelfStore::build_item_from_inputs(path.clone(), parsed_type, &container.unwrap_or_else(|| "main".to_string()));
-    let resolver = IconResolver::new(
-        std::env::temp_dir()
-            .join("popup-bar-icon-cache")
-            .to_string_lossy()
-            .to_string(),
-    );
+    let resolver = IconResolver::new(icon_cache_dir(&app)?.to_string_lossy().to_string());
     match resolver.resolve_icon(&path).await {
         Ok(icon) => item.icon_cache_key = icon.path,
         Err(err) => warn!("add_shelf_item: icon resolution failed: {err}"),
@@ -51,16 +47,11 @@ pub async fn update_shelf_item(item: ShelfItem) -> Result<ShelfItem, String> {
 }
 
 #[tauri::command]
-pub async fn add_dropped_paths(paths: Vec<String>, container: Option<String>) -> Result<Vec<ShelfItem>, String> {
+pub async fn add_dropped_paths(app: AppHandle, paths: Vec<String>, container: Option<String>) -> Result<Vec<ShelfItem>, String> {
     let container_str = container.unwrap_or_else(|| "main".to_string());
     info!("[shelf-cmd] add_dropped_paths container='{}' paths={}", container_str, paths.len());
     let mut items = DndHandler::build_items_from_paths(paths, &container_str)?;
-    let resolver = IconResolver::new(
-        std::env::temp_dir()
-            .join("popup-bar-icon-cache")
-            .to_string_lossy()
-            .to_string(),
-    );
+    let resolver = IconResolver::new(icon_cache_dir(&app)?.to_string_lossy().to_string());
     for item in &mut items {
         match resolver.resolve_icon(&item.path).await {
             Ok(icon) => item.icon_cache_key = icon.path,
@@ -107,16 +98,18 @@ pub async fn delete_item_group(id: String) -> Result<(), String> {
 }
 
 /// Icon cache dir used for resolving and validating icon paths.
-fn icon_cache_dir() -> std::path::PathBuf {
-    std::env::temp_dir().join("popup-bar-icon-cache")
+fn icon_cache_dir(app: &AppHandle) -> Result<std::path::PathBuf, String> {
+    app.path().app_cache_dir()
+        .map(|p| p.join("icons"))
+        .map_err(|e| e.to_string())
 }
 
 /// Return icon file as base64 + mime so the frontend can show it without asset protocol.
 /// Only serves files under the icon cache directory.
 #[tauri::command]
-pub async fn get_icon_data(icon_path: String) -> Result<(String, String), String> {
+pub async fn get_icon_data(app: AppHandle, icon_path: String) -> Result<(String, String), String> {
     let path = Path::new(&icon_path);
-    let cache_dir = icon_cache_dir();
+    let cache_dir = icon_cache_dir(&app)?;
     if !path.starts_with(&cache_dir) || !path.exists() {
         return Err("get_icon_data: path not in cache or missing".into());
     }

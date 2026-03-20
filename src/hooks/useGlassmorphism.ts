@@ -1,17 +1,37 @@
 import { useEffect, useState, type CSSProperties } from "react";
 import { useSettingsStore } from "../stores/settingsStore";
 import { getSkinDataUrl } from "../utils/tauri-bridge";
+import { getCachedDataUrl } from "../utils/media-cache";
 
 export function useGlassmorphism(): CSSProperties {
   const activeSkin = useSettingsStore((s) => s.settings.activeSkin);
   const [skinUrl, setSkinUrl] = useState<string | null>(null);
 
   useEffect(() => {
+    let isMounted = true;
+
     if (!activeSkin) {
       setSkinUrl(null);
-      return;
+      return () => {
+        isMounted = false;
+      };
     }
-    getSkinDataUrl(activeSkin).then(setSkinUrl);
+
+    getCachedDataUrl(`skin:${activeSkin}`, () => getSkinDataUrl(activeSkin))
+      .then((url) => {
+        if (isMounted) {
+          setSkinUrl(url);
+        }
+      })
+      .catch(() => {
+        if (isMounted) {
+          setSkinUrl(null);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
   }, [activeSkin]);
 
   const base: CSSProperties = {

@@ -1,4 +1,5 @@
 export type Theme = "light" | "dark" | "system";
+export type MonitorStrategy = "primary" | "cursor" | "last-active";
 
 export interface SkinInfo {
   name: string;
@@ -14,7 +15,9 @@ export interface Settings {
   tintColor: string;
   theme: Theme;
   autostart: boolean;
+  globalShortcut: string;
   multiMonitor: boolean;
+  monitorStrategy: MonitorStrategy;
   barWidthPx: number;
   barHeightPx: number;
   activeSkin?: string | null;
@@ -28,7 +31,9 @@ export const DEFAULT_SETTINGS: Settings = {
   tintColor: "rgba(255, 255, 255, 0.1)",
   theme: "system",
   autostart: false,
+  globalShortcut: "CommandOrControl+Shift+Space",
   multiMonitor: false,
+  monitorStrategy: "primary",
   barWidthPx: 480,
   barHeightPx: 72,
   activeSkin: null,

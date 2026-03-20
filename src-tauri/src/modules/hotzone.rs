@@ -4,8 +4,6 @@
 //! enters the configurable hotzone at the top edge of the screen.
 //! Full implementation in Phase 1.
 
-use crate::modules::window_manager::BarRect;
-use crate::modules::config::ConfigManager;
 use log::{info, warn};
 use serde::{Deserialize, Serialize};
 use std::sync::{
@@ -15,7 +13,7 @@ use std::sync::{
 };
 use std::thread;
 use std::time::{Duration, Instant};
-use tauri::{AppHandle, Emitter};
+use tauri::{AppHandle, Emitter, Manager};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -218,9 +216,15 @@ impl HotzoneTracker {
             delay,
         );
 
-        let over_bar = app_handle.try_state::<crate::BarRectState>()
-            .and_then(|s| s.0.lock().ok())
-            .map(|r| r.contains(pos.x, pos.y))
+        let over_bar = app_handle
+            .try_state::<crate::BarRectState>()
+            .and_then(|state| {
+                state
+                    .0
+                    .lock()
+                    .ok()
+                    .map(|rect| rect.contains(pos.x, pos.y))
+            })
             .unwrap_or(false);
 
         let leave_suppressed = matches!(evaluation.action, HotzoneAction::Leave) && over_bar;
@@ -243,6 +247,7 @@ impl HotzoneTracker {
     }
 
     /// Stop listening for mouse events.
+    #[allow(dead_code)]
     pub fn stop(&mut self) -> Result<(), String> {
         if !self.is_active {
             return Ok(());
@@ -256,6 +261,7 @@ impl HotzoneTracker {
 
     /// Check if cursor is currently within the hotzone.
     /// Returns `true` while the tracker thread is running.
+    #[allow(dead_code)]
     pub fn is_cursor_in_hotzone(&self) -> bool {
         self.is_active
     }
@@ -272,6 +278,7 @@ impl HotzoneTracker {
     }
 
     /// Whether the tracker is currently running.
+    #[allow(dead_code)]
     pub fn is_active(&self) -> bool {
         self.is_active
     }

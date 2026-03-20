@@ -3,6 +3,7 @@
 //! Exposes settings read/write to the React frontend; persists via ConfigManager.
 
 use crate::modules::config::{AppSettings, ConfigManager, SkinInfo};
+use crate::SettingsState;
 use base64::Engine;
 use std::path::PathBuf;
 use tauri::{Emitter, Manager, WebviewWindow};
@@ -10,17 +11,39 @@ use uuid::Uuid;
 
 /// Get current application settings from SQLite.
 #[tauri::command]
-pub async fn get_settings() -> Result<AppSettings, String> {
-    ConfigManager::load().await
+pub async fn get_settings(
+    settings_state: tauri::State<'_, SettingsState>,
+) -> Result<AppSettings, String> {
+    settings_state
+        .0
+        .read()
+        .map(|settings| settings.clone())
+        .map_err(|_| "failed to read settings state".to_string())
 }
 
 #[tauri::command]
 pub async fn update_settings(
     app: tauri::AppHandle,
     settings: AppSettings,
+    settings_state: tauri::State<'_, SettingsState>,
     hotzone_tracker: tauri::State<'_, std::sync::Mutex<crate::modules::hotzone::HotzoneTracker>>,
 ) -> Result<AppSettings, String> {
+    let previous_settings = settings_state
+        .0
+        .read()
+        .map(|state| state.clone())
+        .map_err(|_| "failed to read settings state".to_string())?;
+    let settings = settings.normalize();
+
+    crate::sync_global_shortcut(&app, &previous_settings.global_shortcut, &settings.global_shortcut)?;
     ConfigManager::save(&settings).await?;
+    settings_state
+        .0
+        .write()
+        .map_err(|_| "failed to write settings state".to_string())
+        .map(|mut state| {
+            *state = settings.clone();
+        })?;
     
     log::info!("[settings] update_settings called: hotzone_size={}", settings.hotzone_size);
  
@@ -128,10 +151,22 @@ pub async fn import_skin(app: tauri::AppHandle, source_path: String) -> Result<S
 pub async fn set_active_skin(
     app: tauri::AppHandle,
     filename: Option<String>,
+    settings_state: tauri::State<'_, SettingsState>,
 ) -> Result<AppSettings, String> {
-    let mut settings = ConfigManager::load().await?;
+    let mut settings = settings_state
+        .0
+        .read()
+        .map(|state| state.clone())
+        .map_err(|_| "failed to read settings state".to_string())?;
     settings.active_skin = filename;
     ConfigManager::save(&settings).await?;
+    settings_state
+        .0
+        .write()
+        .map_err(|_| "failed to write settings state".to_string())
+        .map(|mut state| {
+            *state = settings.clone();
+        })?;
     app.emit("settings_changed", &settings)
         .map_err(|e: tauri::Error| e.to_string())?;
     Ok(settings)
@@ -143,6 +178,7 @@ pub async fn delete_skin(
     app: tauri::AppHandle,
     _window: WebviewWindow,
     filename: String,
+    settings_state: tauri::State<'_, SettingsState>,
 ) -> Result<AppSettings, String> {
     let dir = skins_dir(&app)?;
     let path = dir.join(&filename);
@@ -150,10 +186,21 @@ pub async fn delete_skin(
         std::fs::remove_file(&path).map_err(|e| e.to_string())?;
     }
 
-    let mut settings = ConfigManager::load().await?;
+    let mut settings = settings_state
+        .0
+        .read()
+        .map(|state| state.clone())
+        .map_err(|_| "failed to read settings state".to_string())?;
     if settings.active_skin.as_deref() == Some(&filename) {
         settings.active_skin = None;
         ConfigManager::save(&settings).await?;
+        settings_state
+            .0
+            .write()
+            .map_err(|_| "failed to write settings state".to_string())
+            .map(|mut state| {
+                *state = settings.clone();
+            })?;
         app.emit("settings_changed", &settings)
             .map_err(|e: tauri::Error| e.to_string())?;
     }

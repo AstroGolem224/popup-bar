@@ -6,11 +6,10 @@
 
 use super::{MousePosition, PlatformProvider};
 use base64::Engine;
-use log::info;
 use std::process::Command;
 use windows_sys::Win32::Foundation::POINT;
-use windows_sys::Win32::UI::WindowsAndMessaging::GetCursorPos;
 use super::MonitorInfo;
+use windows_sys::Win32::UI::WindowsAndMessaging::GetCursorPos;
 
 use std::sync::Mutex;
 use std::time::{Duration, Instant};

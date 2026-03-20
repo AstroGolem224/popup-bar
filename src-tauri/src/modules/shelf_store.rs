@@ -4,9 +4,9 @@
 //! Provides the core data layer for creating, reading, updating, and
 //! deleting shelf entries.
 
-use log::info;
 use serde::{Deserialize, Serialize};
 use sqlx::Row;
+use std::collections::HashMap;
 use std::path::PathBuf;
 use std::str::FromStr;
 use tokio::sync::OnceCell;
@@ -201,25 +201,15 @@ impl ShelfStore {
     }
 
     pub async fn add_item(mut item: ShelfItem) -> Result<ShelfItem, String> {
-        
-        // If position is default (0.0), find the next available position in this container
-        if item.position.x == 0.0 {
-            item.position.x = Self::get_next_position_x(&item.container).await?;
-        }
-
+        Self::prepare_items_for_insert(std::slice::from_mut(&mut item)).await?;
         let pool = Self::pool().await?;
 
         sqlx::query(
             "INSERT INTO shelf_items (id, item_type, path, display_name, icon_cache_key, position_x, position_y, group_id, container, created_at, last_used)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, COALESCE(NULLIF(?10, ''), strftime('%Y-%m-%dT%H:%M:%SZ', 'now')), COALESCE(NULLIF(?11, ''), strftime('%Y-%m-%dT%H:%M:%SZ', 'now')))",
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
         )
         .bind(&item.id)
-        .bind(match item.item_type {
-            ItemType::File => "file",
-            ItemType::Folder => "folder",
-            ItemType::App => "app",
-            ItemType::Url => "url",
-        })
+        .bind(Self::item_type_as_str(&item.item_type))
         .bind(&item.path)
         .bind(&item.display_name)
         .bind(&item.icon_cache_key)
@@ -233,24 +223,41 @@ impl ShelfStore {
         .await
         .map_err(|e| e.to_string())?;
 
-        let row = sqlx::query(
-            "SELECT id, item_type, path, display_name, icon_cache_key, position_x, position_y, group_id, container, created_at, last_used
-             FROM shelf_items WHERE id = ?1",
-        )
-        .bind(&item.id)
-        .fetch_one(pool)
-        .await
-        .map_err(|e| e.to_string())?;
-
-        Self::row_to_item(&row)
+        Ok(item)
     }
 
-    pub async fn add_items(items: Vec<ShelfItem>) -> Result<Vec<ShelfItem>, String> {
-        let mut added = Vec::with_capacity(items.len());
-        for item in items {
-            added.push(Self::add_item(item).await?);
+    pub async fn add_items(mut items: Vec<ShelfItem>) -> Result<Vec<ShelfItem>, String> {
+        if items.is_empty() {
+            return Ok(items);
         }
-        Ok(added)
+
+        Self::prepare_items_for_insert(&mut items).await?;
+        let pool = Self::pool().await?;
+        let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
+
+        for item in &items {
+            sqlx::query(
+                "INSERT INTO shelf_items (id, item_type, path, display_name, icon_cache_key, position_x, position_y, group_id, container, created_at, last_used)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
+            )
+            .bind(&item.id)
+            .bind(Self::item_type_as_str(&item.item_type))
+            .bind(&item.path)
+            .bind(&item.display_name)
+            .bind(&item.icon_cache_key)
+            .bind(item.position.x)
+            .bind(item.position.y)
+            .bind(&item.group_id)
+            .bind(&item.container)
+            .bind(&item.created_at)
+            .bind(&item.last_used)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| e.to_string())?;
+        }
+
+        tx.commit().await.map_err(|e| e.to_string())?;
+        Ok(items)
     }
 
     pub async fn remove_item(id: &str) -> Result<(), String> {
@@ -391,6 +398,54 @@ impl ShelfStore {
             container: container.to_string(),
             created_at: String::new(),
             last_used: String::new(),
+        }
+    }
+
+    async fn prepare_items_for_insert(items: &mut [ShelfItem]) -> Result<(), String> {
+        if items.is_empty() {
+            return Ok(());
+        }
+
+        let mut next_positions = HashMap::new();
+
+        for item in items.iter() {
+            if item.position.x != 0.0 || next_positions.contains_key(&item.container) {
+                continue;
+            }
+
+            let next_x = Self::get_next_position_x(&item.container).await?;
+            next_positions.insert(item.container.clone(), next_x);
+        }
+
+        for item in items.iter_mut() {
+            if item.position.x == 0.0 {
+                let next_x = next_positions.entry(item.container.clone()).or_insert(0.0);
+                item.position.x = *next_x;
+                *next_x += 1.0;
+            }
+
+            let now = Self::current_timestamp();
+            if item.created_at.is_empty() {
+                item.created_at = now.clone();
+            }
+            if item.last_used.is_empty() {
+                item.last_used = now;
+            }
+        }
+
+        Ok(())
+    }
+
+    fn current_timestamp() -> String {
+        chrono::Utc::now().format("%Y-%m-%dT%H:%M:%SZ").to_string()
+    }
+
+    fn item_type_as_str(item_type: &ItemType) -> &'static str {
+        match item_type {
+            ItemType::File => "file",
+            ItemType::Folder => "folder",
+            ItemType::App => "app",
+            ItemType::Url => "url",
         }
     }
 }

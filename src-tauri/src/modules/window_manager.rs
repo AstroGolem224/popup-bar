@@ -237,6 +237,10 @@ impl PopupWindowManager {
         &self.state
     }
 
+    pub fn wants_visible(&self) -> bool {
+        matches!(self.state, WindowState::Showing | WindowState::Visible)
+    }
+
     fn allocate_transition_token(&mut self) -> u64 {
         let token = self.next_transition_token;
         self.next_transition_token = self.next_transition_token.saturating_add(1);
@@ -252,7 +256,7 @@ impl PopupWindowManager {
 
 #[cfg(test)]
 mod tests {
-    use super::{PopupWindowManager, WindowConfig, WindowState, WindowStateError};
+    use super::{PopupWindowManager, WindowConfig, WindowState};
 
     #[test]
     fn hidden_to_visible_path_is_valid() {

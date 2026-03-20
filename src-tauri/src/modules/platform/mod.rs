@@ -28,6 +28,7 @@ pub struct MonitorInfo {
 }
 
 /// Platform-agnostic interface for OS-level operations.
+#[allow(dead_code)]
 pub trait PlatformProvider: Send + Sync {
     /// Register a hotzone listener at the top screen edge.
     fn register_hotzone(&self, height: u32) -> Result<(), String>;

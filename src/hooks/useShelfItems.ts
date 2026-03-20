@@ -6,7 +6,7 @@
  *
  * Uses Zustand as local cache and synchronizes with Tauri commands.
  */
-import { useEffect, useState } from "react";
+import { startTransition, useCallback, useEffect, useState } from "react";
 import type { ShelfItem, ItemGroup } from "../types/shelf";
 import {
   addShelfItem,
@@ -58,20 +58,36 @@ export function useShelfItems(): UseShelfItemsReturn {
   const setError = useShelfStore((state) => state.setError);
 
   // Determine the current window label for container filtering
-  const [container, setContainer] = useState("main");
-
-  useEffect(() => {
+  const [container] = useState(() => {
     try {
-      const label = getCurrentWebviewWindow().label;
-      setContainer(label);
-      console.log(`[shelf] Hook detected window="${label}"`);
-    } catch (e) {
-      console.warn("[shelf] Failed to detect window label, defaulting to main", e);
+      return getCurrentWebviewWindow().label;
+    } catch {
+      return "main";
     }
-  }, []);
+  });
+
+  const loadShelfData = useCallback(
+    async (includeGroups: boolean) => {
+      try {
+        const [allItems, allGroups] = await Promise.all([
+          getShelfItems(container),
+          includeGroups ? getItemGroups() : Promise.resolve(null),
+        ]);
+
+        startTransition(() => {
+          setItems(allItems);
+          if (allGroups) {
+            setGroups(allGroups);
+          }
+        });
+      } catch (error) {
+        throw error;
+      }
+    },
+    [container, setGroups, setItems],
+  );
 
   useEffect(() => {
-    console.log(`[shelf] Fetching items for container="${container}"`);
     let isMounted = true;
     void (async () => {
       try {
@@ -80,8 +96,10 @@ export function useShelfItems(): UseShelfItemsReturn {
           getItemGroups(),
         ]);
         if (isMounted) {
-          setItems(allItems);
-          setGroups(allGroups);
+          startTransition(() => {
+            setItems(allItems);
+            setGroups(allGroups);
+          });
         }
       } catch (error) {
         console.warn("initial shelf load failed", error);
@@ -92,21 +110,15 @@ export function useShelfItems(): UseShelfItemsReturn {
     return () => {
       isMounted = false;
     };
-  }, [container, setError, setItems]);
+  }, [container, setError, setGroups, setItems]);
 
   // Listen for shelf_items_changed events emitted by Rust (e.g. sidebar drag-drop)
   // and reload items from backend to keep all windows in sync.
   useEffect(() => {
     let unlisten: (() => void) | undefined;
     listen("shelf_items_changed", async () => {
-      console.log(`[shelf] shelf_items_changed event received in ${container}, reloading items`);
       try {
-        const [allItems, allGroups] = await Promise.all([
-          getShelfItems(container),
-          getItemGroups(),
-        ]);
-        setItems(allItems);
-        setGroups(allGroups);
+        await loadShelfData(false);
       } catch (error) {
         console.warn("shelf reload after change failed", error);
       }
@@ -116,7 +128,7 @@ export function useShelfItems(): UseShelfItemsReturn {
     return () => {
       unlisten?.();
     };
-  }, [container, setItems, setGroups]);
+  }, [loadShelfData]);
 
   return {
     items,
