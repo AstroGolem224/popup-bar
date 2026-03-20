@@ -46,7 +46,7 @@ fn clamp_bar_width(bar_width_px: u32, monitor_width: u32) -> u32 {
     let max_w = monitor_width.min(1200);
     if bar_width_px == 0 {
         (monitor_width / BAR_WIDTH_FRACTION).clamp(min_w, max_w)
-    }
+    } else {
         bar_width_px.clamp(min_w, max_w)
     }
 }
@@ -62,13 +62,13 @@ fn position_on_monitor(
     bar_width_px: u32,
     bar_height_px: u32,
 ) -> Result<BarRect, String> {
-    let _label = window.label();
+    let label = window.label();
     let monitor = if primary_only {
         window
             .primary_monitor()
             .map_err(|e| e.to_string())?
             .ok_or_else(|| "no primary monitor".to_string())?
-    }
+    } else {
         window
             .primary_monitor()
             .map_err(|e| e.to_string())?
@@ -115,9 +115,9 @@ pub async fn show_window(
 ) -> Result<Option<u64>, String> {
     let settings = ConfigManager::load().await.unwrap_or_default();
     let primary_only = !settings.multi_monitor;
-    let _label = window.label();
+    let label = window.label();
 
-    let _label = window.label();
+    let label = window.label();
 
     let mut manager = window_manager.0
         .lock()
@@ -144,7 +144,6 @@ pub async fn show_window(
             warn!("[show_window] window.show() failed for {}: {}", label, e);
             e.to_string()
         })?;
-    }
     }
     Ok(token)
 }
