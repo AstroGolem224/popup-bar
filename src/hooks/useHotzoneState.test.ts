@@ -9,7 +9,7 @@ import {
   showWindow,
 } from "../utils/tauri-bridge";
 
-type EventHandler = () => void | Promise<void>;
+type EventHandler = (event?: any) => void | Promise<void>;
 
 const listeners = new Map<string, EventHandler>();
 
@@ -27,6 +27,13 @@ vi.mock("../utils/tauri-bridge", () => ({
   completeShowWindow: vi.fn(),
   hideWindow: vi.fn(),
   completeHideWindow: vi.fn(),
+  getCurrentWindow: vi.fn(() => ({ label: "main" })),
+  listen: vi.fn(async (eventName: string, handler: EventHandler) => {
+    listeners.set(eventName, handler);
+    return () => {
+      listeners.delete(eventName);
+    };
+  }),
 }));
 
 async function emit(eventName: string): Promise<void> {
@@ -36,7 +43,7 @@ async function emit(eventName: string): Promise<void> {
   }
 
   await act(async () => {
-    await handler();
+    await handler({ payload: { edge: "top" } });
   });
 }
 
