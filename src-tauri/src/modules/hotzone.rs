@@ -4,9 +4,8 @@
 //! enters the configurable hotzone at the top edge of the screen.
 //! Full implementation in Phase 1.
 
-use crate::modules::window_manager::BarRect;
-use crate::modules::config::ConfigManager;
 use log::{info, warn};
+use tauri::Manager;
 use serde::{Deserialize, Serialize};
 use std::sync::{
     atomic::{AtomicBool, Ordering},

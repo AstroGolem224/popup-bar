@@ -4,7 +4,6 @@
 //! APIs. Caches extracted icons to disk for fast subsequent lookups.
 
 use crate::modules::platform::create_provider;
-use log::info;
 use serde::{Deserialize, Serialize};
 use sqlx::Row;
 use std::collections::hash_map::DefaultHasher;
