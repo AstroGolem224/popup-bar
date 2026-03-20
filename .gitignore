@@ -4,6 +4,7 @@ src-tauri/target/
 # Node
 node_modules/
 dist/
+!dist/.gitkeep
 
 # Environment
 .env
@@ -22,4 +23,3 @@ Thumbs.db
 
 # Build output
 *.tsbuildinfo
-.gstack/

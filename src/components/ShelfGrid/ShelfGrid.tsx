@@ -5,29 +5,21 @@ import "./ShelfGrid.css";
 
 export interface ShelfGridProps {
   items: ShelfItem[];
-  alignment?: "centered" | "start" | "grid";
-  orientation?: "horizontal" | "vertical";
   /** When user clicks delete (X) on an item. */
   onDeleteItem?: (id: string) => void | Promise<void>;
 }
 
-export function ShelfGrid({ 
-  items, 
-  alignment = "centered", 
-  orientation = "horizontal",
-  onDeleteItem 
-}: ShelfGridProps) {
-  const { onReorderMouseDown, draggingId, dragOverId } = useItemReorder();
+export function ShelfGrid({ items, onDeleteItem }: ShelfGridProps) {
+  const { onDragStart, onDropOnItem } = useItemReorder();
 
   return (
-    <div className={`shelf-grid shelf-grid--${alignment} shelf-grid--${orientation}`}>
+    <div className="shelf-grid">
       {items.map((item) => (
         <ShelfItemComponent
           key={item.id}
           item={item}
-          isDragging={draggingId === item.id}
-          isDragOver={dragOverId === item.id}
-          onReorderMouseDown={onReorderMouseDown}
+          onDragStartItem={onDragStart}
+          onDropOnItem={onDropOnItem}
           onDelete={onDeleteItem}
         />
       ))}

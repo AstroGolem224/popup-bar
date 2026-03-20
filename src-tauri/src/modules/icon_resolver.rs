@@ -51,13 +51,17 @@ impl IconResolver {
             return Ok(cached);
         }
 
-        let pool = crate::modules::shelf_store::ShelfStore::pool().await?;
+        let db_path = crate::modules::shelf_store::ShelfStore::get_db_path();
+        let url = format!("sqlite:{}", db_path.display());
+        let pool = sqlx::SqlitePool::connect(&url)
+            .await
+            .map_err(|e| e.to_string())?;
 
         if let Some(existing_row) = sqlx::query(
             "SELECT icon_path, source_path FROM icon_cache WHERE hash = ?1",
         )
         .bind(&cache_key)
-        .fetch_optional(pool)
+        .fetch_optional(&pool)
         .await
         .map_err(|e| e.to_string())?
         {
@@ -66,20 +70,20 @@ impl IconResolver {
             let source_path: String = existing_row
                 .try_get("source_path")
                 .unwrap_or_else(|_| String::new());
-            if Path::new(&existing_path).exists() {
-                if source_path.is_empty() || Path::new(&source_path).exists() {
-                    return Ok(CachedIcon {
-                        cache_key,
-                        path: existing_path,
-                        format: IconFormat::Png,
-                        size: 256,
-                    });
-                }
+            if Path::new(&existing_path).exists()
+                && (source_path.is_empty() || Path::new(&source_path).exists())
+            {
+                return Ok(CachedIcon {
+                    cache_key,
+                    path: existing_path,
+                    format: IconFormat::Png,
+                    size: 256,
+                });
             }
             let _ = self.evict(&cache_key);
             let _ = sqlx::query("DELETE FROM icon_cache WHERE hash = ?1")
                 .bind(&cache_key)
-                .execute(pool)
+                .execute(&pool)
                 .await;
         }
 
@@ -115,10 +119,11 @@ impl IconResolver {
         .bind(&cache_key)
         .bind(file_path.to_string_lossy().to_string())
         .bind(path)
-        .execute(pool)
+        .execute(&pool)
         .await
         .map_err(|e| e.to_string())?;
 
+        info!("IconResolver: resolved icon for path");
         Ok(CachedIcon {
             cache_key,
             path: file_path.to_string_lossy().to_string(),

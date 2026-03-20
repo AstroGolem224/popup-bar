@@ -1,0 +1,3 @@
+## 2024-03-18 - Added Value Hints to Range Sliders in Settings
+**Learning:** Users lack context for exact values when adjusting range sliders for layout configurations without explicit value hints. When implementing range sliders (`<input type="range">`), especially for precise settings like animation speed and dimensions, it's beneficial for UX to pair them with an explicit hint element to display the current exact value.
+**Action:** Always include a `<span className="settings-panel__hint">` to display the specific value next to range sliders in the settings UI for better visibility and UX consistency.

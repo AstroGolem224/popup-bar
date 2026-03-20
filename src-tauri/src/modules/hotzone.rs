@@ -5,7 +5,6 @@
 //! Full implementation in Phase 1.
 
 use crate::modules::window_manager::BarRect;
-use crate::modules::config::ConfigManager;
 use log::{info, warn};
 use serde::{Deserialize, Serialize};
 use std::sync::{
@@ -16,12 +15,6 @@ use std::sync::{
 use std::thread;
 use std::time::{Duration, Instant};
 use tauri::{AppHandle, Emitter};
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "lowercase")]
-pub enum Edge {
-    Top,
-}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum HotzoneAction {
@@ -82,13 +75,13 @@ fn evaluate_hotzone_transition(
     }
 }
 
-/// Defines the rectangular hotzone regions.
+/// Defines the rectangular hotzone region at the top of the screen.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HotzoneConfig {
-    /// Height/Width of the hotzone trigger area in pixels.
-    pub size: u32,
-    /// Whether the top hotzone is enabled (always true for Top per user requirement).
-    pub top_enabled: bool,
+    /// Height of the hotzone trigger area in pixels.
+    pub height: u32,
+    /// Whether the hotzone is currently enabled.
+    pub enabled: bool,
     /// Delay before triggering (debounce) in milliseconds.
     pub delay_ms: u64,
 }
@@ -96,100 +89,102 @@ pub struct HotzoneConfig {
 impl Default for HotzoneConfig {
     fn default() -> Self {
         Self {
-            size: 5,
-            top_enabled: true,
+            height: 5,
+            enabled: true,
             delay_ms: 200,
         }
     }
 }
 
-/// Tracks mouse position across multiple edges and manages hotzone activation state.
+/// Tracks mouse position and manages hotzone activation state.
 pub struct HotzoneTracker {
-    config: Arc<Mutex<HotzoneConfig>>,
+    config: HotzoneConfig,
     is_active: bool,
     stop_signal: Arc<AtomicBool>,
-}
-
-#[derive(Default)]
-struct EdgeState {
-    in_hotzone_active: bool,
-    enter_candidate_since: Option<Instant>,
 }
 
 impl HotzoneTracker {
     /// Create a new tracker with the given config.
     pub fn new(config: HotzoneConfig) -> Self {
         Self {
-            config: Arc::new(Mutex::new(config)),
+            config,
             is_active: false,
             stop_signal: Arc::new(AtomicBool::new(false)),
         }
     }
 
-    /// Start listening for mouse events in the hotzones.
+    /// Start listening for mouse events in the hotzone.
     ///
     /// Current implementation: lightweight polling loop with platform cursor API.
     /// Emits:
-    /// - `hotzone:enter` with `{ edge, x, y }`
-    /// - `hotzone:leave` with `{ edge }`
-    pub fn start(
-        &mut self,
-        app_handle: AppHandle,
-    ) -> Result<(), String> {
+    /// - `hotzone:enter` with `{ x, y }`
+    /// - `hotzone:leave` with `null`
+    pub fn start(&mut self, app_handle: AppHandle, bar_rect: Arc<Mutex<BarRect>>) -> Result<(), String> {
         if self.is_active {
             return Ok(());
         }
 
         info!("HotzoneTracker: starting");
-        let config_shared = Arc::clone(&self.config);
+        let config = self.config.clone();
         let stop_signal = Arc::clone(&self.stop_signal);
         stop_signal.store(false, Ordering::Relaxed);
 
         thread::spawn(move || {
             let provider = crate::modules::platform::create_provider();
-            let mut top_state = EdgeState::default();
+            let mut in_hotzone_active = false;
+            let mut enter_candidate_since: Option<Instant> = None;
 
             loop {
                 if stop_signal.load(Ordering::Relaxed) {
                     break;
                 }
 
+                if !config.enabled {
+                    thread::sleep(Duration::from_millis(200));
+                    continue;
+                }
+
                 match provider.get_mouse_position() {
                     Ok(pos) => {
-                        let (delay, size) = {
-                            let config = config_shared.lock().unwrap();
-                            (Duration::from_millis(config.delay_ms), config.size)
-                        };
-
-                        let monitor = provider.get_primary_monitor();
-                        let (screen_x, screen_y, screen_w, _screen_h) = monitor
-                            .map(|m| (m.x as f64, m.y as f64, m.width as f64, m.height as f64))
-                            .unwrap_or((0.0, 0.0, 1920.0, 1080.0));
-
-                        let rel_x = pos.x - screen_x;
-                        let rel_y = pos.y - screen_y;
+                        let in_hotzone_now = pos.y <= config.height as f64;
                         let now = Instant::now();
-
-                        let in_now = rel_y >= 0.0 && rel_y <= size as f64 && rel_x >= 0.0 && rel_x <= screen_w;
-                        Self::process_edge(
-                            Edge::Top,
-                            in_now,
-                            &mut top_state,
-                            &pos,
-                            &app_handle,
+                        let evaluation = evaluate_hotzone_transition(
+                            in_hotzone_now,
+                            in_hotzone_active,
+                            enter_candidate_since,
                             now,
-                            delay,
+                            Duration::from_millis(config.delay_ms),
                         );
 
-                        // Dynamic sleep: if far from top, sleep longer
-                        let sleep_dur = if rel_y > 200.0 {
-                            Duration::from_millis(100)
-                        } else {
-                            Duration::from_millis(25)
-                        };
-                        thread::sleep(sleep_dur);
+                        let over_bar = bar_rect
+                            .lock()
+                            .map(|r| r.contains(pos.x, pos.y))
+                            .unwrap_or(false);
+
+                        // If we would leave but cursor is over the bar, keep bar open (don't emit leave).
+                        let leave_suppressed = matches!(evaluation.action, HotzoneAction::Leave) && over_bar;
+                        if matches!(evaluation.action, HotzoneAction::Leave) && !over_bar {
+                            in_hotzone_active = false;
+                            enter_candidate_since = None;
+                            if let Err(err) = app_handle.emit("hotzone:leave", ()) {
+                                warn!("HotzoneTracker: failed to emit hotzone:leave: {err}");
+                            }
+                        } else if !leave_suppressed {
+                            in_hotzone_active = evaluation.in_hotzone_active;
+                            enter_candidate_since = evaluation.enter_candidate_since;
+                        }
+                        if matches!(evaluation.action, HotzoneAction::Enter) {
+                            if let Err(err) =
+                                app_handle.emit("hotzone:enter", serde_json::json!({ "x": pos.x, "y": pos.y }))
+                            {
+                                warn!("HotzoneTracker: failed to emit hotzone:enter: {err}");
+                            }
+                        }
+
+                        thread::sleep(Duration::from_millis(25));
                     }
                     Err(err) => {
+                        // Avoid noisy spin-loops if a platform provider is not ready yet.
                         warn!("HotzoneTracker: cursor position unavailable: {err}");
                         thread::sleep(Duration::from_millis(500));
                     }
@@ -199,47 +194,6 @@ impl HotzoneTracker {
 
         self.is_active = true;
         Ok(())
-    }
-
-    fn process_edge(
-        edge: Edge,
-        in_now: bool,
-        state: &mut EdgeState,
-        pos: &crate::modules::platform::MousePosition,
-        app_handle: &AppHandle,
-        now: Instant,
-        delay: Duration,
-    ) {
-        let evaluation = evaluate_hotzone_transition(
-            in_now,
-            state.in_hotzone_active,
-            state.enter_candidate_since,
-            now,
-            delay,
-        );
-
-        let over_bar = app_handle.try_state::<crate::BarRectState>()
-            .and_then(|s| s.0.lock().ok())
-            .map(|r| r.contains(pos.x, pos.y))
-            .unwrap_or(false);
-
-        let leave_suppressed = matches!(evaluation.action, HotzoneAction::Leave) && over_bar;
-
-        if matches!(evaluation.action, HotzoneAction::Leave) && !over_bar {
-            state.in_hotzone_active = false;
-            state.enter_candidate_since = None;
-            let _ = app_handle.emit("hotzone:leave", serde_json::json!({ "edge": edge }));
-        } else if !leave_suppressed {
-            state.in_hotzone_active = evaluation.in_hotzone_active;
-            state.enter_candidate_since = evaluation.enter_candidate_since;
-        }
- 
-        if matches!(evaluation.action, HotzoneAction::Enter) {
-            let _ = app_handle.emit(
-                "hotzone:enter",
-                serde_json::json!({ "edge": edge, "x": pos.x, "y": pos.y }),
-            );
-        }
     }
 
     /// Stop listening for mouse events.
@@ -262,13 +216,7 @@ impl HotzoneTracker {
 
     /// Update hotzone configuration at runtime.
     pub fn update_config(&mut self, config: HotzoneConfig) {
-        info!("[hotzone] update_config called: size={}", config.size);
-        if let Ok(mut c) = self.config.lock() {
-            *c = config;
-            info!("[hotzone] config updated successfully");
-        } else {
-            warn!("[hotzone] FAILED to lock config for update!");
-        }
+        self.config = config;
     }
 
     /// Whether the tracker is currently running.

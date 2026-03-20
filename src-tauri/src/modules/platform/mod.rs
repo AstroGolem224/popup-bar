@@ -18,15 +18,6 @@ pub struct MousePosition {
     pub y: f64,
 }
 
-/// Information about a monitor.
-#[derive(Debug, Clone, Copy)]
-pub struct MonitorInfo {
-    pub x: i32,
-    pub y: i32,
-    pub width: u32,
-    pub height: u32,
-}
-
 /// Platform-agnostic interface for OS-level operations.
 pub trait PlatformProvider: Send + Sync {
     /// Register a hotzone listener at the top screen edge.
@@ -46,9 +37,6 @@ pub trait PlatformProvider: Send + Sync {
 
     /// Launch an item using the platform's default handler.
     fn launch_item(&self, path: &str) -> Result<(), String>;
-
-    /// Get the primary monitor's dimensions.
-    fn get_primary_monitor(&self) -> Option<MonitorInfo>;
 }
 
 /// Create the appropriate platform provider for the current OS.

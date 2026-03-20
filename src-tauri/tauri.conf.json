@@ -12,15 +12,10 @@
   "app": {
     "withGlobalTauri": true,
     "security": {
-      "csp": "default-src 'self' asset: https://asset.localhost; style-src 'self' 'unsafe-inline'; img-src 'self' asset: https://asset.localhost data:",
-      "assetProtocol": {
-        "enable": true,
-        "scope": ["$APPDATA/skins/**"]
-      }
+      "csp": "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' asset: https://asset.localhost"
     },
     "windows": [
       {
-        "label": "main",
         "title": "Popup Bar",
         "width": 640,
         "height": 72,
@@ -38,9 +33,15 @@
   },
   "bundle": {
     "icon": [
+      "icons/icon.png",
       "icons/icon.ico"
     ],
-    "targets": ["msi", "dmg", "appimage", "deb"]
+    "targets": [
+      "msi",
+      "dmg",
+      "appimage",
+      "deb"
+    ]
   },
   "plugins": {
     "sql": {

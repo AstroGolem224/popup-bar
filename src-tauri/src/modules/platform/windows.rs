@@ -10,31 +10,26 @@ use log::info;
 use std::process::Command;
 use windows_sys::Win32::Foundation::POINT;
 use windows_sys::Win32::UI::WindowsAndMessaging::GetCursorPos;
-use super::MonitorInfo;
 
-use std::sync::Mutex;
-use std::time::{Duration, Instant};
- 
 /// Windows platform provider.
-pub struct WindowsProvider {
-    primary_monitor_cache: Mutex<Option<(MonitorInfo, Instant)>>,
-}
+pub struct WindowsProvider;
 
 impl WindowsProvider {
     /// Create a new Windows platform provider.
     pub fn new() -> Self {
-        Self {
-            primary_monitor_cache: Mutex::new(None),
-        }
+        info!("WindowsProvider: initialized");
+        Self
     }
 }
 
 impl PlatformProvider for WindowsProvider {
     fn register_hotzone(&self, _height: u32) -> Result<(), String> {
+        info!("WindowsProvider: register_hotzone (stub — Phase 1)");
         Ok(())
     }
 
     fn unregister_hotzone(&self) -> Result<(), String> {
+        info!("WindowsProvider: unregister_hotzone (stub — Phase 1)");
         Ok(())
     }
 
@@ -53,6 +48,8 @@ impl PlatformProvider for WindowsProvider {
     }
 
     fn set_window_vibrancy(&self, _blur_radius: f64, _tint_color: &str) -> Result<(), String> {
+        // Handled via window-vibrancy crate in lib.rs setup
+        info!("WindowsProvider: vibrancy handled in lib.rs setup");
         Ok(())
     }
 
@@ -103,64 +100,5 @@ $icon.Dispose()
     fn launch_item(&self, _path: &str) -> Result<(), String> {
         // Phase 2: ShellExecuteW
         Err("Launcher not implemented on Windows (Phase 2)".into())
-    }
-
-    fn get_primary_monitor(&self) -> Option<MonitorInfo> {
-        // Check cache first (refresh every 2 seconds)
-        if let Ok(cache) = self.primary_monitor_cache.lock() {
-            if let Some((info, last_update)) = &*cache {
-                if last_update.elapsed() < Duration::from_secs(2) {
-                    return Some(*info);
-                }
-            }
-        }
-
-        use windows_sys::Win32::Graphics::Gdi::{
-            EnumDisplayMonitors, GetMonitorInfoW, HDC, HMONITOR, MONITORINFO,
-        };
-        use windows_sys::Win32::Foundation::{BOOL, LPARAM, RECT};
-
-        // Internal helper to find the primary monitor
-        unsafe extern "system" fn monitor_enum_proc(
-            hmonitor: HMONITOR,
-            _: HDC,
-            _: *mut RECT,
-            lparam: LPARAM,
-        ) -> BOOL {
-            let mut info: MONITORINFO = std::mem::zeroed();
-            info.cbSize = std::mem::size_of::<MONITORINFO>() as u32;
-            if GetMonitorInfoW(hmonitor, &mut info) != 0 {
-                // MONITORINFOF_PRIMARY is 0x1
-                if (info.dwFlags & 0x1) != 0 {
-                    let ptr = lparam as *mut Option<MonitorInfo>;
-                    *ptr = Some(MonitorInfo {
-                        x: info.rcMonitor.left,
-                        y: info.rcMonitor.top,
-                        width: (info.rcMonitor.right - info.rcMonitor.left) as u32,
-                        height: (info.rcMonitor.bottom - info.rcMonitor.top) as u32,
-                    });
-                    return 0; // Stop enumeration
-                }
-            }
-            1 // Continue enumeration
-        }
-
-        let mut primary_monitor: Option<MonitorInfo> = None;
-        unsafe {
-            EnumDisplayMonitors(
-                std::ptr::null_mut(),
-                std::ptr::null(),
-                Some(monitor_enum_proc),
-                &mut primary_monitor as *mut _ as LPARAM,
-            );
-        }
-
-        if let Some(m) = primary_monitor {
-            if let Ok(mut cache) = self.primary_monitor_cache.lock() {
-                *cache = Some((m, Instant::now()));
-            }
-        }
-
-        primary_monitor
     }
 }

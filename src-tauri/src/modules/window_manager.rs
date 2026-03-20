@@ -252,7 +252,7 @@ impl PopupWindowManager {
 
 #[cfg(test)]
 mod tests {
-    use super::{PopupWindowManager, WindowConfig, WindowState, WindowStateError};
+    use super::{PopupWindowManager, WindowConfig, WindowState};
 
     #[test]
     fn hidden_to_visible_path_is_valid() {

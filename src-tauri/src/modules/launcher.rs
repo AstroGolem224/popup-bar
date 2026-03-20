@@ -7,6 +7,7 @@
 
 use super::shelf_store::ItemType;
 use log::info;
+#[allow(unused_imports)]
 use std::process::Command;
 use tauri::AppHandle;
 use tauri_plugin_shell::ShellExt;
@@ -25,6 +26,7 @@ impl Launcher {
     /// with spaces work reliably (shell.open is deprecated and can misbehave).
     #[cfg_attr(target_os = "windows", allow(unused_variables))]
     pub fn open(app: &AppHandle, item_type: &ItemType, path: &str) -> Result<(), String> {
+        info!("Launcher: open {:?} -> {}", item_type, path);
         if !Self::validate_target(path) {
             return Err("Launcher: invalid target path".into());
         }
@@ -47,6 +49,7 @@ impl Launcher {
         }
 
         #[cfg(not(target_os = "windows"))]
+        #[allow(deprecated)]
         app.shell()
             .open(path.to_string(), None)
             .map_err(|e| format!("Launcher: open failed: {e}"))
@@ -57,6 +60,7 @@ impl Launcher {
     /// Currently not implemented; reserved für eine spätere phase mit
     /// expliziter programmauswahl.
     pub fn open_with(_app: &AppHandle, _path: &str, _app_path: &str) -> Result<(), String> {
+        info!("Launcher: open_with (stub — Phase 3)");
         Err("Launcher: open_with not implemented (Phase 3)".into())
     }
 
@@ -66,10 +70,12 @@ impl Launcher {
     /// ein reveal oder open ist. Eine spezialisierte implementation
     /// kann später ergänzt werden.
     pub fn reveal_in_file_manager(app: &AppHandle, path: &str) -> Result<(), String> {
+        info!("Launcher: reveal_in_file_manager {}", path);
         if !Self::validate_target(path) {
             return Err("Launcher: invalid target path".into());
         }
 
+        #[allow(deprecated)]
         app.shell()
             .open(path.to_string(), None)
             .map_err(|e| format!("Launcher: reveal_in_file_manager failed: {e}"))

@@ -7,26 +7,20 @@ use crate::modules::dnd_handler::DndHandler;
 use crate::modules::icon_resolver::IconResolver;
 use crate::modules::shelf_store::{ItemGroup, ItemType, Position, ShelfItem, ShelfStore};
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
-use log::{info, warn};
+use log::warn;
 use std::path::Path;
 use std::str::FromStr;
 use uuid::Uuid;
 
 #[tauri::command]
-pub async fn get_shelf_items(container: Option<String>) -> Result<Vec<ShelfItem>, String> {
-    info!("[shelf-cmd] get_shelf_items container={:?}", container);
-    let result = match container {
-        Some(c) => ShelfStore::get_items_by_container(&c).await,
-        None => ShelfStore::get_all_items().await,
-    };
-    info!("[shelf-cmd] get_shelf_items returning {} items", result.as_ref().map(|v| v.len()).unwrap_or(0));
-    result
+pub async fn get_shelf_items() -> Result<Vec<ShelfItem>, String> {
+    ShelfStore::get_all_items().await
 }
 
 #[tauri::command]
-pub async fn add_shelf_item(path: String, item_type: String, container: Option<String>) -> Result<ShelfItem, String> {
+pub async fn add_shelf_item(path: String, item_type: String) -> Result<ShelfItem, String> {
     let parsed_type = ItemType::from_str(&item_type)?;
-    let mut item = ShelfStore::build_item_from_inputs(path.clone(), parsed_type, &container.unwrap_or_else(|| "main".to_string()));
+    let mut item = ShelfStore::build_item_from_inputs(path.clone(), parsed_type);
     let resolver = IconResolver::new(
         std::env::temp_dir()
             .join("popup-bar-icon-cache")
@@ -51,10 +45,8 @@ pub async fn update_shelf_item(item: ShelfItem) -> Result<ShelfItem, String> {
 }
 
 #[tauri::command]
-pub async fn add_dropped_paths(paths: Vec<String>, container: Option<String>) -> Result<Vec<ShelfItem>, String> {
-    let container_str = container.unwrap_or_else(|| "main".to_string());
-    info!("[shelf-cmd] add_dropped_paths container='{}' paths={}", container_str, paths.len());
-    let mut items = DndHandler::build_items_from_paths(paths, &container_str)?;
+pub async fn add_dropped_paths(paths: Vec<String>) -> Result<Vec<ShelfItem>, String> {
+    let mut items = DndHandler::build_items_from_paths(paths)?;
     let resolver = IconResolver::new(
         std::env::temp_dir()
             .join("popup-bar-icon-cache")

@@ -4,65 +4,34 @@
  * slide-up: Bar exiting to top (ease-in for natural acceleration)
  */
 @keyframes slide-down {
-  from { transform: translateY(-100%); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
+  from {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 
 @keyframes slide-up {
-  from { transform: translateY(0); opacity: 1; }
-  to { transform: translateY(-100%); opacity: 0; }
+  from {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
 }
 
-@keyframes slide-right {
-  from { transform: translateX(-100%); opacity: 0; }
-  to { transform: translateX(0); opacity: 1; }
-}
-
-@keyframes slide-left-in { /* Enter from right edge */
-  from { transform: translateX(100%); opacity: 0; }
-  to { transform: translateX(0); opacity: 1; }
-}
-
-/* Orientation-aware classes */
-.shelf-bar--horizontal.shelf-bar--visible {
+/* Duration from CSS variable (set from settings.animationSpeed in ShelfBar) */
+.shelf-bar--visible {
   animation: slide-down var(--shelf-bar-duration-show, 220ms) cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-.shelf-bar--horizontal.shelf-bar--hidden {
+.shelf-bar--hidden {
   animation: slide-up var(--shelf-bar-duration-hide, 180ms) cubic-bezier(0.7, 0, 0.84, 0) forwards;
-}
-
-.shelf-bar--vertical.shelf-bar--visible {
-  /* We need to distinguish between left and right in CSS or use a generic transition. */
-  /* For simplicity, let's use the parent window's class if we had one, or just generic fade if unsure. */
-  /* Actually, we can use the window label if we pass it down, or just use a generic slide. */
-  /* Let's try to detect if we are on left or right via a className. */
-  animation: fade-in var(--shelf-bar-duration-show, 220ms) cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-
-/* Specific side-bar entry classes (added via App.tsx if needed) */
-.bar-left .shelf-bar--visible {
-  animation: slide-right var(--shelf-bar-duration-show, 220ms) cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-.bar-left .shelf-bar--hidden {
-  animation: slide-left var(--shelf-bar-duration-hide, 180ms) cubic-bezier(0.7, 0, 0.84, 0) forwards;
-}
-
-.bar-right .shelf-bar--visible {
-  animation: slide-left-in var(--shelf-bar-duration-show, 220ms) cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-.bar-right .shelf-bar--hidden {
-  animation: slide-right-out var(--shelf-bar-duration-hide, 180ms) cubic-bezier(0.7, 0, 0.84, 0) forwards;
-}
-
-@keyframes slide-left { /* Exit to left edge */
-  from { transform: translateX(0); opacity: 1; }
-  to { transform: translateX(-100%); opacity: 0; }
-}
-
-@keyframes slide-right-out { /* Exit to right edge */
-  from { transform: translateX(0); opacity: 1; }
-  to { transform: translateX(100%); opacity: 0; }
 }
 
 /* Subtle fade for shelf items appearing */

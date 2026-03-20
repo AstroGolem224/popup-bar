@@ -6,7 +6,7 @@
  *
  * Uses Zustand as local cache and synchronizes with Tauri commands.
  */
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import type { ShelfItem, ItemGroup } from "../types/shelf";
 import {
   addShelfItem,
@@ -15,11 +15,8 @@ import {
   getItemGroups,
   getShelfItems,
   removeShelfItem,
-  reorderShelfItems,
   updateItemGroup,
   updateShelfItem,
-  listen,
-  getCurrentWebviewWindow,
 } from "../utils/tauri-bridge";
 import { useShelfStore } from "../stores/shelfStore";
 import type { ItemType } from "../types/shelf";
@@ -29,8 +26,6 @@ interface UseShelfItemsReturn {
   items: ShelfItem[];
   /** All item groups. */
   groups: ItemGroup[];
-  /** Current window label (container). */
-  container: string;
   /** Add an item. */
   addItem: (path: string, itemType: string) => Promise<void>;
   /** Remove an item by ID. */
@@ -43,8 +38,6 @@ interface UseShelfItemsReturn {
   updateGroup: (group: ItemGroup) => Promise<void>;
   /** Delete an item group by ID. */
   removeGroup: (id: string) => Promise<void>;
-  /** Move an item to a new index. */
-  moveItem: (id: string, newIndex: number) => Promise<void>;
 }
 
 export function useShelfItems(): UseShelfItemsReturn {
@@ -57,26 +50,12 @@ export function useShelfItems(): UseShelfItemsReturn {
   const setGroups = useShelfStore((state) => state.setGroups);
   const setError = useShelfStore((state) => state.setError);
 
-  // Determine the current window label for container filtering
-  const [container, setContainer] = useState("main");
-
   useEffect(() => {
-    try {
-      const label = getCurrentWebviewWindow().label;
-      setContainer(label);
-      console.log(`[shelf] Hook detected window="${label}"`);
-    } catch (e) {
-      console.warn("[shelf] Failed to detect window label, defaulting to main", e);
-    }
-  }, []);
-
-  useEffect(() => {
-    console.log(`[shelf] Fetching items for container="${container}"`);
     let isMounted = true;
     void (async () => {
       try {
         const [allItems, allGroups] = await Promise.all([
-          getShelfItems(container),
+          getShelfItems(),
           getItemGroups(),
         ]);
         if (isMounted) {
@@ -92,39 +71,14 @@ export function useShelfItems(): UseShelfItemsReturn {
     return () => {
       isMounted = false;
     };
-  }, [container, setError, setItems]);
-
-  // Listen for shelf_items_changed events emitted by Rust (e.g. sidebar drag-drop)
-  // and reload items from backend to keep all windows in sync.
-  useEffect(() => {
-    let unlisten: (() => void) | undefined;
-    listen("shelf_items_changed", async () => {
-      console.log(`[shelf] shelf_items_changed event received in ${container}, reloading items`);
-      try {
-        const [allItems, allGroups] = await Promise.all([
-          getShelfItems(container),
-          getItemGroups(),
-        ]);
-        setItems(allItems);
-        setGroups(allGroups);
-      } catch (error) {
-        console.warn("shelf reload after change failed", error);
-      }
-    }).then((fn) => {
-      unlisten = fn;
-    });
-    return () => {
-      unlisten?.();
-    };
-  }, [container, setItems, setGroups]);
+  }, [setError, setItems]);
 
   return {
     items,
     groups,
-    container,
     addItem: async (path: string, itemType: string) => {
       try {
-        const item = await addShelfItem(path, itemType as ItemType, container);
+        const item = await addShelfItem(path, itemType as ItemType);
         storeAddItem(item);
       } catch (error) {
         console.warn("add_shelf_item failed", error);
@@ -183,25 +137,6 @@ export function useShelfItems(): UseShelfItemsReturn {
       } catch (error) {
         console.warn("delete_item_group failed", error);
         setError("gruppe konnte nicht geloescht werden");
-      }
-    },
-    moveItem: async (id: string, newIndex: number) => {
-      const currentItems = useShelfStore.getState().items;
-      const oldIndex = currentItems.findIndex((i) => i.id === id);
-      if (oldIndex === -1 || oldIndex === newIndex) return;
-
-      const newItems = [...currentItems];
-      const [movedItem] = newItems.splice(oldIndex, 1);
-      if (!movedItem) return;
-      newItems.splice(newIndex, 0, movedItem);
-
-      useShelfStore.getState().setItems(newItems);
-      try {
-        await reorderShelfItems(newItems.map((i) => i.id));
-      } catch (error) {
-        console.warn("move_item persist failed", error);
-        setError("reihenfolge konnte nicht gespeichert werden");
-        useShelfStore.getState().setItems(currentItems);
       }
     },
   };

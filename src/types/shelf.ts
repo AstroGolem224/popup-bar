@@ -8,8 +8,6 @@ export interface ShelfItem {
   iconCacheKey: string;
   position: { x: number; y: number };
   groupId?: string;
-  /** Which bar this item belongs to: "main", "left", or "right" */
-  container: string;
   createdAt: string;
   lastUsed: string;
 }

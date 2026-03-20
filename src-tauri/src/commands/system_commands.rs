@@ -2,17 +2,14 @@
 //!
 //! Window show/hide and platform information exposed to the frontend.
 
-use crate::modules::platform::create_provider;
 use crate::modules::config::ConfigManager;
 use crate::modules::launcher::Launcher;
 use crate::modules::shelf_store::ItemType;
-use crate::modules::window_manager::BarRect;
-use crate::BarRectState;
-use crate::ManagerState;
+use crate::modules::window_manager::{BarRect, PopupWindowManager};
 use serde::Serialize;
-use log::{info, warn};
 use std::str::FromStr;
-use tauri::{AppHandle, Manager, State, WebviewWindow};
+use std::sync::{Arc, Mutex};
+use tauri::{AppHandle, State, WebviewWindow};
 
 /// Basic platform information.
 #[derive(Serialize)]
@@ -36,7 +33,7 @@ pub fn get_platform_info() -> PlatformInfo {
 }
 
 /// Height when settings panel is open so content is visible.
-const BAR_HEIGHT_SETTINGS: u32 = 520;
+const BAR_HEIGHT_SETTINGS: u32 = 320;
 
 /// Bar width as fraction of monitor width when bar_width_px is 0.
 const BAR_WIDTH_FRACTION: u32 = 3;
@@ -62,7 +59,6 @@ fn position_on_monitor(
     bar_width_px: u32,
     bar_height_px: u32,
 ) -> Result<BarRect, String> {
-    let label = window.label();
     let monitor = if primary_only {
         window
             .primary_monitor()
@@ -76,60 +72,44 @@ fn position_on_monitor(
     };
     let pos = monitor.position();
     let size = monitor.size();
-
     let bar_width = clamp_bar_width(bar_width_px, size.width);
     let bar_height = clamp_bar_height(bar_height_px);
-
-    match label {
-        "main" => {
-            let center_x = pos.x + (size.width as i32 - bar_width as i32) / 2;
-            window
-                .set_position(tauri::Position::Physical(tauri::PhysicalPosition {
-                    x: center_x,
-                    y: pos.y,
-                }))
-                .map_err(|e| e.to_string())?;
-            window
-                .set_size(tauri::Size::Physical(tauri::PhysicalSize {
-                    width: bar_width,
-                    height: bar_height,
-                }))
-                .map_err(|e| e.to_string())?;
-            Ok(BarRect {
-                x: center_x,
-                y: pos.y,
-                width: bar_width,
-                height: bar_height,
-            })
-        }
-        _ => Err(format!("unsupported window label for positioning: {label}")),
-    }
+    let center_x = pos.x + (size.width as i32 - bar_width as i32) / 2;
+    window
+        .set_position(tauri::Position::Physical(tauri::PhysicalPosition {
+            x: center_x,
+            y: pos.y,
+        }))
+        .map_err(|e| e.to_string())?;
+    window
+        .set_size(tauri::Size::Physical(tauri::PhysicalSize {
+            width: bar_width,
+            height: bar_height,
+        }))
+        .map_err(|e| e.to_string())?;
+    Ok(BarRect {
+        x: center_x,
+        y: pos.y,
+        width: bar_width,
+        height: bar_height,
+    })
 }
 
 /// Show the main popup bar window.
 #[tauri::command]
 pub async fn show_window(
     window: WebviewWindow,
-    window_manager: State<'_, ManagerState>,
-    bar_rect: State<'_, BarRectState>,
+    window_manager: State<'_, Mutex<PopupWindowManager>>,
+    bar_rect: State<'_, Arc<Mutex<BarRect>>>,
 ) -> Result<Option<u64>, String> {
     let settings = ConfigManager::load().await.unwrap_or_default();
     let primary_only = !settings.multi_monitor;
-    let label = window.label();
 
-    let label = window.label();
-
-    let mut manager = window_manager.0
+    let mut manager = window_manager
         .lock()
-        .map_err(|_| {
-            warn!("[show_window] failed to lock window manager");
-            "failed to lock window manager".to_string()
-        })?;
+        .map_err(|_| "failed to lock window manager".to_string())?;
 
-    let token = manager.request_show().map_err(|e| {
-        warn!("[show_window] request_show failed: {}", e);
-        e.to_string()
-    })?;
+    let token = manager.request_show().map_err(|e| e.to_string())?;
     if token.is_some() {
         let rect = position_on_monitor(
             &window,
@@ -137,14 +117,10 @@ pub async fn show_window(
             settings.bar_width_px,
             settings.bar_height_px,
         )?;
-        if let Ok(mut r) = bar_rect.0.lock() {
+        if let Ok(mut r) = bar_rect.lock() {
             *r = rect;
         }
-        window.show().map_err(|e| {
-            warn!("[show_window] window.show() failed for {}: {}", label, e);
-            e.to_string()
-        })?;
-    } else {
+        window.show().map_err(|e| e.to_string())?;
     }
     Ok(token)
 }
@@ -153,9 +129,9 @@ pub async fn show_window(
 #[tauri::command]
 pub async fn complete_show_window(
     token: u64,
-    window_manager: State<'_, ManagerState>,
+    window_manager: State<'_, Mutex<PopupWindowManager>>,
 ) -> Result<bool, String> {
-    let mut manager = window_manager.0
+    let mut manager = window_manager
         .lock()
         .map_err(|_| "failed to lock window manager".to_string())?;
     manager.confirm_shown(token).map_err(|e| e.to_string())
@@ -164,9 +140,9 @@ pub async fn complete_show_window(
 /// Start hide lifecycle. The actual OS hide happens in `complete_hide_window`.
 #[tauri::command]
 pub async fn hide_window(
-    window_manager: State<'_, ManagerState>,
+    window_manager: State<'_, Mutex<PopupWindowManager>>,
 ) -> Result<Option<u64>, String> {
-    let mut manager = window_manager.0
+    let mut manager = window_manager
         .lock()
         .map_err(|_| "failed to lock window manager".to_string())?;
     manager.request_hide().map_err(|e| e.to_string())
@@ -177,16 +153,16 @@ pub async fn hide_window(
 pub async fn complete_hide_window(
     window: WebviewWindow,
     token: u64,
-    window_manager: State<'_, ManagerState>,
-    bar_rect: State<'_, BarRectState>,
+    window_manager: State<'_, Mutex<PopupWindowManager>>,
+    bar_rect: State<'_, Arc<Mutex<BarRect>>>,
 ) -> Result<bool, String> {
-    let mut manager = window_manager.0
+    let mut manager = window_manager
         .lock()
         .map_err(|_| "failed to lock window manager".to_string())?;
 
     let applied = manager.confirm_hidden(token).map_err(|e| e.to_string())?;
     if applied {
-        if let Ok(mut r) = bar_rect.0.lock() {
+        if let Ok(mut r) = bar_rect.lock() {
             *r = BarRect::default();
         }
         window.hide().map_err(|e| e.to_string())?;
@@ -194,46 +170,32 @@ pub async fn complete_hide_window(
     Ok(applied)
 }
 
-/// Open the settings panel as a separate window.
+/// Expand or collapse the main window (e.g. when settings open/close).
+/// Updates size and BarRect so hotzone "stay over bar" still works.
 #[tauri::command]
 pub async fn set_settings_expanded(
-    app: AppHandle,
+    window: WebviewWindow,
+    bar_rect: State<'_, Arc<Mutex<BarRect>>>,
     expanded: bool,
 ) -> Result<(), String> {
-    if !expanded {
-        // If we want to support closing via this command
-        if let Some(settings_window) = app.get_webview_window("settings") {
-            let _ = settings_window.close();
-        }
-        return Ok(());
+    let size = window
+        .outer_size()
+        .map_err(|e| e.to_string())?;
+    let settings = ConfigManager::load().await.unwrap_or_default();
+    let height = if expanded {
+        BAR_HEIGHT_SETTINGS
+    } else {
+        clamp_bar_height(settings.bar_height_px)
+    };
+    window
+        .set_size(tauri::Size::Physical(tauri::PhysicalSize {
+            width: size.width,
+            height,
+        }))
+        .map_err(|e| e.to_string())?;
+    if let Ok(mut r) = bar_rect.lock() {
+        r.height = height;
     }
-
-    if let Some(settings_window) = app.get_webview_window("settings") {
-        let _ = settings_window.set_focus();
-        return Ok(());
-    }
-
-    let mouse_pos = create_provider()
-        .get_mouse_position()
-        .unwrap_or(crate::modules::platform::MousePosition { x: 0.0, y: 0.0 });
-
-    let width = 360.0;
-    let height = 520.0;
-
-    let _window = tauri::WebviewWindowBuilder::new(
-        &app,
-        "settings",
-        tauri::WebviewUrl::App("index.html".into()),
-    )
-    .title("Popup Bar - Einstellungen")
-    .inner_size(width, height)
-    .position(mouse_pos.x - (width / 2.0), mouse_pos.y - 20.0)
-    .resizable(true)
-    .decorations(true)
-    .always_on_top(true)
-    .build()
-    .map_err(|e| e.to_string())?;
-
     Ok(())
 }
 
