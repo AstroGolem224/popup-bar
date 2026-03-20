@@ -1,0 +1,3 @@
+## 2024-03-01 - React.memo and Stable Callback Optimization
+**Learning:** Using `React.memo` on list items like `ShelfItem` is highly effective but easily broken if parent components (`ShelfBar`) pass down inline functions or unstable callbacks. In this codebase, the `removeItem` function from Zustand via `useShelfItems` was not stable across `ShelfBar`'s visibility renders, which would cause all `ShelfItems` to re-render.
+**Action:** Stabilize callback props passed to memoized components using the `useRef` + `useCallback` pattern. Also, when testing Tauri components that rely on `listen`, make sure the mock returns an event object with a `payload` to avoid `TypeError`s in the test suite.

@@ -1,4 +1,5 @@
 import { ShelfGrid } from "../ShelfGrid";
+import { useCallback, useRef, useEffect } from "react";
 import { useShelfItems } from "../../hooks/useShelfItems";
 import { useGlassmorphism } from "../../hooks/useGlassmorphism";
 import { useSettingsStore } from "../../stores/settingsStore";
@@ -31,6 +32,15 @@ export function ShelfBar({
 
   const alignment = useSettingsStore((s) => s.settings.alignment);
 
+  const removeItemRef = useRef(removeItem);
+  useEffect(() => {
+    removeItemRef.current = removeItem;
+  }, [removeItem]);
+
+  const handleDeleteItem = useCallback((id: string) => {
+    void removeItemRef.current(id);
+  }, []);
+
   return (
     <>
       <div
@@ -49,7 +59,7 @@ export function ShelfBar({
             </p>
           </div>
         ) : (
-          <ShelfGrid items={items} alignment={alignment} orientation={orientation} onDeleteItem={(id) => void removeItem(id)} />
+          <ShelfGrid items={items} alignment={alignment} orientation={orientation} onDeleteItem={handleDeleteItem} />
         )}
         <div className="shelf-bar__right-actions">
           <button
