@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { ShelfItem as ShelfItemComponent } from "../ShelfItem";
 import type { ShelfItem } from "../../types/shelf";
 import { useItemReorder, type ItemPosition } from "../../hooks/useItemReorder";
@@ -110,6 +110,9 @@ export function ShelfGrid({
     return positions;
   }, {});
 
+  const onUpdateItemRef = useRef(onUpdateItem);
+  onUpdateItemRef.current = onUpdateItem;
+
   const { onReorderMouseDown, draggingId, dragPositions, activationBlockedId } = useItemReorder({
     items,
     resolvedPositions: basePositions,
@@ -121,7 +124,7 @@ export function ShelfGrid({
         return;
       }
 
-      await onUpdateItem({
+      await onUpdateItemRef.current({
         ...item,
         position,
       });
@@ -138,6 +141,15 @@ export function ShelfGrid({
     return leftPosition.x - rightPosition.x;
   });
 
+  const onDeleteItemRef = useRef(onDeleteItem);
+  onDeleteItemRef.current = onDeleteItem;
+
+  const handleDeleteItem = useCallback((id: string) => {
+    if (onDeleteItemRef.current) {
+      void onDeleteItemRef.current(id);
+    }
+  }, []);
+
   return (
     <div
       ref={containerRef}
@@ -150,14 +162,11 @@ export function ShelfGrid({
           <ShelfItemComponent
             key={item.id}
             item={item}
-            style={{
-              position: "absolute",
-              left: `${position.x}px`,
-              top: `${position.y}px`,
-            }}
+            positionX={position.x}
+            positionY={position.y}
             isDragging={draggingId === item.id}
             onReorderMouseDown={onReorderMouseDown}
-            onDelete={onDeleteItem}
+            onDelete={onDeleteItem ? handleDeleteItem : undefined}
             activationBlocked={activationBlockedId === item.id}
           />
         );

@@ -1,0 +1,3 @@
+## 2024-02-14 - React List Performance with Drag and Drop
+**Learning:** High-frequency state updates in React list parents (like mouse position during drag and drop) cause full list re-renders. `React.memo` alone fails if child components receive new inline styles `style={{ left: pos.x }}` or unmemoized callback functions as props.
+**Action:** When mapping list items that update frequently, always wrap the list component in `React.memo`, pass primitive positional props (`positionX`, `positionY`) instead of inline objects, and stabilize all parent callbacks passed down using `useRef` + `useCallback`.

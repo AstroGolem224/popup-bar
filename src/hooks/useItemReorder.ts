@@ -177,35 +177,37 @@ export function useItemReorder({
     mouseUpHandlerRef.current(event as MouseEvent);
   }, []);
 
-  const onReorderMouseDown = useCallback(
-    (itemId: string, event: React.MouseEvent) => {
-      if (event.button !== 0) {
-        return;
-      }
+  const onReorderMouseDownRef = useRef<(itemId: string, event: React.MouseEvent) => void>(() => {});
+  onReorderMouseDownRef.current = (itemId: string, event: React.MouseEvent) => {
+    if (event.button !== 0) {
+      return;
+    }
 
-      const item = items.find((entry) => entry.id === itemId);
-      if (!item) {
-        return;
-      }
+    const item = items.find((entry) => entry.id === itemId);
+    if (!item) {
+      return;
+    }
 
-      event.preventDefault();
-      const itemStart = dragPositions[itemId] ?? resolvedPositions[itemId] ?? {
-        x: item.position.x,
-        y: Math.max(item.position.y, MIN_MANUAL_Y),
-      };
+    event.preventDefault();
+    const itemStart = dragPositions[itemId] ?? resolvedPositions[itemId] ?? {
+      x: item.position.x,
+      y: Math.max(item.position.y, MIN_MANUAL_Y),
+    };
 
-      activeDragRef.current = {
-        itemId,
-        mouseStart: { x: event.clientX, y: event.clientY },
-        itemStart,
-        moved: false,
-      };
+    activeDragRef.current = {
+      itemId,
+      mouseStart: { x: event.clientX, y: event.clientY },
+      itemStart,
+      moved: false,
+    };
 
-      document.addEventListener("mousemove", mouseMoveWrapper);
-      document.addEventListener("mouseup", mouseUpWrapper);
-    },
-    [dragPositions, items, mouseMoveWrapper, mouseUpWrapper, resolvedPositions],
-  );
+    document.addEventListener("mousemove", mouseMoveWrapper);
+    document.addEventListener("mouseup", mouseUpWrapper);
+  };
+
+  const onReorderMouseDown = useCallback((itemId: string, event: React.MouseEvent) => {
+    onReorderMouseDownRef.current(itemId, event);
+  }, []);
 
   useEffect(() => {
     return () => {

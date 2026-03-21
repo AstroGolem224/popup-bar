@@ -7,7 +7,7 @@
  */
 import type { ShelfItem as ShelfItemType } from "../../types/shelf";
 import type { CSSProperties } from "react";
-import { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useMemo } from "react";
 import {
   getIconDataUrl,
   openShelfItemViaLauncher,
@@ -20,6 +20,10 @@ const ACTIVATE_DEBOUNCE_MS = 400;
 export interface ShelfItemProps {
   /** The shelf item data to render. */
   item: ShelfItemType;
+  /** Position X. */
+  positionX?: number;
+  /** Position Y. */
+  positionY?: number;
   /** Whether this item is currently being dragged. */
   isDragging?: boolean;
   /** Whether another item is being dragged over this one. */
@@ -28,19 +32,18 @@ export interface ShelfItemProps {
   onReorderMouseDown?: (id: string, event: React.MouseEvent) => void;
   /** Callback when delete (X) is clicked. */
   onDelete?: (id: string) => void | Promise<void>;
-  /** Inline positioning style from the layout system. */
-  style?: CSSProperties;
   /** Suppresses accidental open directly after dragging. */
   activationBlocked?: boolean;
 }
 
-export function ShelfItem({
+export const ShelfItem = React.memo(function ShelfItem({
   item,
+  positionX,
+  positionY,
   isDragging = false,
   isDragOver = false,
   onReorderMouseDown,
   onDelete,
-  style,
   activationBlocked = false,
 }: ShelfItemProps) {
   const [iconLoadFailed, setIconLoadFailed] = useState(false);
@@ -103,10 +106,18 @@ export function ShelfItem({
     isDragOver ? "shelf-item--drag-over" : "",
   ].filter(Boolean).join(" ");
 
+  const combinedStyle = useMemo<CSSProperties>(() => {
+    return {
+      position: "absolute",
+      left: positionX !== undefined ? `${positionX}px` : undefined,
+      top: positionY !== undefined ? `${positionY}px` : undefined,
+    };
+  }, [positionX, positionY]);
+
   return (
     <div
       className={classNames}
-      style={style}
+      style={combinedStyle}
       data-shelf-item-id={item.id}
       title={item.displayName}
       tabIndex={0}
@@ -154,4 +165,4 @@ export function ShelfItem({
       </div>
     </div>
   );
-}
+});
