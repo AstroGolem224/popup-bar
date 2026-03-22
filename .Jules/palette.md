@@ -1,0 +1,3 @@
+## 2024-05-15 - Range Slider UX and Type Safety in Settings
+**Learning:** When adding explicit value display hints `<span className="settings-panel__hint">` to `<input type="range">` elements in the Settings UI, using `.toFixed()` directly on state values that might be technically valid `0` but falsy can cause `TypeError` application crashes if a naive `||` fallback is used.
+**Action:** Always enforce robust type casting and default fallbacks using the nullish coalescing operator `??` instead of `||` (e.g., `Number(settings.value ?? fallback).toFixed(1)`) to ensure `0` is treated as a valid value and does not trigger incorrect fallbacks.
