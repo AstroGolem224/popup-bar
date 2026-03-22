@@ -7,7 +7,7 @@
  */
 import type { ShelfItem as ShelfItemType } from "../../types/shelf";
 import type { CSSProperties } from "react";
-import { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   getIconDataUrl,
   openShelfItemViaLauncher,
@@ -28,19 +28,22 @@ export interface ShelfItemProps {
   onReorderMouseDown?: (id: string, event: React.MouseEvent) => void;
   /** Callback when delete (X) is clicked. */
   onDelete?: (id: string) => void | Promise<void>;
-  /** Inline positioning style from the layout system. */
-  style?: CSSProperties;
+  /** X coordinate from the layout system. */
+  positionX?: number;
+  /** Y coordinate from the layout system. */
+  positionY?: number;
   /** Suppresses accidental open directly after dragging. */
   activationBlocked?: boolean;
 }
 
-export function ShelfItem({
+export const ShelfItem = React.memo(function ShelfItem({
   item,
   isDragging = false,
   isDragOver = false,
   onReorderMouseDown,
   onDelete,
-  style,
+  positionX,
+  positionY,
   activationBlocked = false,
 }: ShelfItemProps) {
   const [iconLoadFailed, setIconLoadFailed] = useState(false);
@@ -103,10 +106,19 @@ export function ShelfItem({
     isDragOver ? "shelf-item--drag-over" : "",
   ].filter(Boolean).join(" ");
 
+  const inlineStyle: CSSProperties | undefined =
+    positionX !== undefined && positionY !== undefined
+      ? {
+          position: "absolute",
+          left: `${positionX}px`,
+          top: `${positionY}px`,
+        }
+      : undefined;
+
   return (
     <div
       className={classNames}
-      style={style}
+      style={inlineStyle}
       data-shelf-item-id={item.id}
       title={item.displayName}
       tabIndex={0}
@@ -154,4 +166,4 @@ export function ShelfItem({
       </div>
     </div>
   );
-}
+});
