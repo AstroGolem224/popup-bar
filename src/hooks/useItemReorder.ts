@@ -84,6 +84,21 @@ export function useItemReorder({
   const mouseMoveHandlerRef = useRef<(event: MouseEvent) => void>(() => {});
   const mouseUpHandlerRef = useRef<(event: MouseEvent) => void>(() => {});
 
+  // State ref to provide latest values to stable callbacks
+  const stateRef = useRef({
+    items,
+    resolvedPositions,
+    dragPositions,
+  });
+
+  useEffect(() => {
+    stateRef.current = {
+      items,
+      resolvedPositions,
+      dragPositions,
+    };
+  }, [items, resolvedPositions, dragPositions]);
+
   const clearInteractionStyles = useCallback(() => {
     document.body.style.cursor = "";
     document.body.style.userSelect = "";
@@ -183,13 +198,15 @@ export function useItemReorder({
         return;
       }
 
-      const item = items.find((entry) => entry.id === itemId);
+      const { items: currentItems, resolvedPositions: currentResolved, dragPositions: currentDrag } = stateRef.current;
+
+      const item = currentItems.find((entry) => entry.id === itemId);
       if (!item) {
         return;
       }
 
       event.preventDefault();
-      const itemStart = dragPositions[itemId] ?? resolvedPositions[itemId] ?? {
+      const itemStart = currentDrag[itemId] ?? currentResolved[itemId] ?? {
         x: item.position.x,
         y: Math.max(item.position.y, MIN_MANUAL_Y),
       };
@@ -204,7 +221,7 @@ export function useItemReorder({
       document.addEventListener("mousemove", mouseMoveWrapper);
       document.addEventListener("mouseup", mouseUpWrapper);
     },
-    [dragPositions, items, mouseMoveWrapper, mouseUpWrapper, resolvedPositions],
+    [mouseMoveWrapper, mouseUpWrapper],
   );
 
   useEffect(() => {
