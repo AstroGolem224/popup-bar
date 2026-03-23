@@ -236,6 +236,9 @@ export function SettingsPanel({ className, onClose }: SettingsPanelProps) {
             value={settings.hotzoneSize}
             onChange={(event) => void apply("hotzoneSize", Number(event.target.value))}
           />
+          <span className="settings-panel__hint">
+            {Number(settings.hotzoneSize ?? 5).toFixed(0)} px
+          </span>
         </label>
       </SettingsGroup>
 
@@ -280,6 +283,9 @@ export function SettingsPanel({ className, onClose }: SettingsPanelProps) {
             value={settings.animationSpeed}
             onChange={(event) => void apply("animationSpeed", Number(event.target.value))}
           />
+          <span className="settings-panel__hint">
+            {Number(settings.animationSpeed ?? 1.0).toFixed(1)}x
+          </span>
         </label>
 
         <label className="settings-panel__field" title="Legt fest, ob Icons frei oder am Raster positioniert werden">
