@@ -1,0 +1,3 @@
+## 2024-05-24 - React.memo for high-frequency state updates
+**Learning:** During high-frequency state changes like drag-and-drop mouse events, passing inline style objects and unstabilized callbacks to list items causes deep re-render trees, significantly impacting rendering performance in this React architecture.
+**Action:** When implementing drag-and-drop or other continuous interactions, wrap list components in `React.memo`, pass primitive positional properties (e.g. `positionX`, `positionY`) instead of inline objects, and stabilize callback props using the 'latest-value ref pattern' to prevent unnecessary re-renders of the entire list.
