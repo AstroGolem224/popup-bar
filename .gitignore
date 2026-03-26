@@ -23,3 +23,7 @@ Thumbs.db
 # Build output
 *.tsbuildinfo
 .gstack/
+
+# Keep dist for tauri build context but ignore its build contents
+/dist/*
+!/dist/.gitkeep

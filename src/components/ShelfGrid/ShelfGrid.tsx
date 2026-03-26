@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ShelfItem as ShelfItemComponent } from "../ShelfItem";
 import type { ShelfItem } from "../../types/shelf";
 import { useItemReorder, type ItemPosition } from "../../hooks/useItemReorder";
@@ -70,8 +70,6 @@ function normalizeManualPosition(
     y: clamp(position.y, 1, Math.max(1, containerSize.height - ITEM_SIZE)),
   };
 }
-
-import { useCallback } from "react";
 
 export function ShelfGrid({
 
