@@ -81,6 +81,10 @@ export function useItemReorder({
   const [dragPositions, setDragPositions] = useState<Record<string, ItemPosition>>({});
   const [activationBlockedId, setActivationBlockedId] = useState<string | null>(null);
   const blockResetTimerRef = useRef<number | null>(null);
+  const latestPropsRef = useRef({ items, dragPositions, resolvedPositions });
+  useEffect(() => {
+    latestPropsRef.current = { items, dragPositions, resolvedPositions };
+  });
   const mouseMoveHandlerRef = useRef<(event: MouseEvent) => void>(() => {});
   const mouseUpHandlerRef = useRef<(event: MouseEvent) => void>(() => {});
 
@@ -183,13 +187,15 @@ export function useItemReorder({
         return;
       }
 
-      const item = items.find((entry) => entry.id === itemId);
+      const { items: latestItems, dragPositions: latestDragPositions, resolvedPositions: latestResolvedPositions } = latestPropsRef.current;
+
+      const item = latestItems.find((entry) => entry.id === itemId);
       if (!item) {
         return;
       }
 
       event.preventDefault();
-      const itemStart = dragPositions[itemId] ?? resolvedPositions[itemId] ?? {
+      const itemStart = latestDragPositions[itemId] ?? latestResolvedPositions[itemId] ?? {
         x: item.position.x,
         y: Math.max(item.position.y, MIN_MANUAL_Y),
       };
@@ -204,7 +210,7 @@ export function useItemReorder({
       document.addEventListener("mousemove", mouseMoveWrapper);
       document.addEventListener("mouseup", mouseUpWrapper);
     },
-    [dragPositions, items, mouseMoveWrapper, mouseUpWrapper, resolvedPositions],
+    [mouseMoveWrapper, mouseUpWrapper],
   );
 
   useEffect(() => {

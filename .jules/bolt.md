@@ -1,0 +1,3 @@
+## 2024-03-26 - React.memo with Inline Objects Breaks Drag Performance
+**Learning:** Wrapping a component (like `ShelfItem`) in `React.memo` is completely ineffective if you continue to pass inline object references (like `style={{ left, top }}`) to it, because the object identity changes every render. The list items will still all needlessly re-render on every mouse movement during a drag operation. This caused significant lag in this app. Also, callbacks need to be stabilized.
+**Action:** When memoizing list components, always destructure layout/position state into primitives (e.g. `positionX`, `positionY`) rather than passing inline objects, and stabilize callback props.

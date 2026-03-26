@@ -6,7 +6,6 @@
  * Icons loaded via get_icon_data (base64) to avoid asset protocol scope.
  */
 import type { ShelfItem as ShelfItemType } from "../../types/shelf";
-import type { CSSProperties } from "react";
 import { useEffect, useRef, useState } from "react";
 import {
   getIconDataUrl,
@@ -16,6 +15,8 @@ import { getCachedDataUrl } from "../../utils/media-cache";
 import "./ShelfItem.css";
 
 const ACTIVATE_DEBOUNCE_MS = 400;
+
+import { memo } from "react";
 
 export interface ShelfItemProps {
   /** The shelf item data to render. */
@@ -28,20 +29,24 @@ export interface ShelfItemProps {
   onReorderMouseDown?: (id: string, event: React.MouseEvent) => void;
   /** Callback when delete (X) is clicked. */
   onDelete?: (id: string) => void | Promise<void>;
-  /** Inline positioning style from the layout system. */
-  style?: CSSProperties;
+  /** Explicit primitive position for rendering to prevent shallow check fails */
+  positionX?: number;
+  positionY?: number;
   /** Suppresses accidental open directly after dragging. */
   activationBlocked?: boolean;
 }
 
-export function ShelfItem({
+export const ShelfItem = memo(function ShelfItem({
+
   item,
   isDragging = false,
   isDragOver = false,
   onReorderMouseDown,
   onDelete,
-  style,
+  positionX = 0,
+  positionY = 1,
   activationBlocked = false,
+
 }: ShelfItemProps) {
   const [iconLoadFailed, setIconLoadFailed] = useState(false);
   const [iconDataUrl, setIconDataUrl] = useState<string | null>(null);
@@ -106,7 +111,7 @@ export function ShelfItem({
   return (
     <div
       className={classNames}
-      style={style}
+      style={{ position: 'absolute', left: `${positionX}px`, top: `${positionY}px` }}
       data-shelf-item-id={item.id}
       title={item.displayName}
       tabIndex={0}
@@ -155,3 +160,4 @@ export function ShelfItem({
     </div>
   );
 }
+);

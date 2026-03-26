@@ -71,12 +71,16 @@ function normalizeManualPosition(
   };
 }
 
+import { useCallback } from "react";
+
 export function ShelfGrid({
+
   items,
   alignment = "centered",
   orientation = "horizontal",
   onDeleteItem,
   onUpdateItem,
+
 }: ShelfGridProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerSize, setContainerSize] = useState({ width: 480, height: 72 });
@@ -128,6 +132,14 @@ export function ShelfGrid({
     },
   });
 
+  const latestOnDeleteRef = useRef(onDeleteItem);
+  useEffect(() => {
+    latestOnDeleteRef.current = onDeleteItem;
+  });
+  const handleDeleteItem = useCallback((id: string) => {
+    latestOnDeleteRef.current?.(id);
+  }, []);
+
   const resolvedPositions = { ...basePositions, ...dragPositions };
   const orderedItems = [...items].sort((left, right) => {
     const leftPosition = resolvedPositions[left.id] ?? { x: 0, y: 0 };
@@ -150,14 +162,11 @@ export function ShelfGrid({
           <ShelfItemComponent
             key={item.id}
             item={item}
-            style={{
-              position: "absolute",
-              left: `${position.x}px`,
-              top: `${position.y}px`,
-            }}
+            positionX={position.x}
+            positionY={position.y}
             isDragging={draggingId === item.id}
             onReorderMouseDown={onReorderMouseDown}
-            onDelete={onDeleteItem}
+            onDelete={handleDeleteItem}
             activationBlocked={activationBlockedId === item.id}
           />
         );
