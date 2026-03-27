@@ -1,0 +1,3 @@
+## 2024-05-18 - Range Slider Value Visibility
+**Learning:** Range sliders (`<input type="range">`) lack implicit visibility of their current numerical values, which can lead to a confusing UX since users cannot discern the exact value they are selecting. The established pattern here is to append a `<span className="settings-panel__hint">` with the value alongside the input.
+**Action:** Always pair settings UI range sliders with an explicit readout of their current values. Use nullish coalescing (`??`) and robust type casting (like `Number(...).toFixed(...)`) to safely format these dynamic values and prevent React crashes from `undefined` defaults.
