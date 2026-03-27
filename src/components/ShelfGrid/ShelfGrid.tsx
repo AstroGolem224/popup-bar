@@ -150,11 +150,8 @@ export function ShelfGrid({
           <ShelfItemComponent
             key={item.id}
             item={item}
-            style={{
-              position: "absolute",
-              left: `${position.x}px`,
-              top: `${position.y}px`,
-            }}
+            positionX={position.x}
+            positionY={position.y}
             isDragging={draggingId === item.id}
             onReorderMouseDown={onReorderMouseDown}
             onDelete={onDeleteItem}
