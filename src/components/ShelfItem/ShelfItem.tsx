@@ -6,8 +6,8 @@
  * Icons loaded via get_icon_data (base64) to avoid asset protocol scope.
  */
 import type { ShelfItem as ShelfItemType } from "../../types/shelf";
-import type { CSSProperties } from "react";
-import { useEffect, useRef, useState } from "react";
+
+import React, { useEffect, useRef, useState } from "react";
 import {
   getIconDataUrl,
   openShelfItemViaLauncher,
@@ -28,19 +28,22 @@ export interface ShelfItemProps {
   onReorderMouseDown?: (id: string, event: React.MouseEvent) => void;
   /** Callback when delete (X) is clicked. */
   onDelete?: (id: string) => void | Promise<void>;
-  /** Inline positioning style from the layout system. */
-  style?: CSSProperties;
+  /** X position for layout. */
+  positionX?: number;
+  /** Y position for layout. */
+  positionY?: number;
   /** Suppresses accidental open directly after dragging. */
   activationBlocked?: boolean;
 }
 
-export function ShelfItem({
+export const ShelfItem = React.memo(function ShelfItem({
   item,
   isDragging = false,
   isDragOver = false,
   onReorderMouseDown,
   onDelete,
-  style,
+  positionX,
+  positionY,
   activationBlocked = false,
 }: ShelfItemProps) {
   const [iconLoadFailed, setIconLoadFailed] = useState(false);
@@ -106,7 +109,11 @@ export function ShelfItem({
   return (
     <div
       className={classNames}
-      style={style}
+      style={{
+        position: "absolute",
+        left: positionX !== undefined ? `${positionX}px` : undefined,
+        top: positionY !== undefined ? `${positionY}px` : undefined,
+      }}
       data-shelf-item-id={item.id}
       title={item.displayName}
       tabIndex={0}
@@ -154,4 +161,4 @@ export function ShelfItem({
       </div>
     </div>
   );
-}
+});
