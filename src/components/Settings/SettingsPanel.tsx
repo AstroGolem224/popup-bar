@@ -81,7 +81,7 @@ function SkinGrid({
                 onDelete(skin.filename);
               }}
             >
-              x
+              ✕
             </span>
           </button>
         ))}
@@ -221,7 +221,7 @@ export function SettingsPanel({ className, onClose }: SettingsPanelProps) {
             onClick={onClose}
             aria-label="Schliessen"
           >
-            x
+            ✕
           </button>
         ) : null}
       </div>
