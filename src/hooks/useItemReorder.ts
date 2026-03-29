@@ -177,19 +177,28 @@ export function useItemReorder({
     mouseUpHandlerRef.current(event as MouseEvent);
   }, []);
 
+  // ⚡ Bolt: Use latest-value ref pattern to stabilize onReorderMouseDown
+  // This prevents the callback from changing identity on every drag move,
+  // which would otherwise break React.memo on child ShelfItem components.
+  const dependenciesRef = useRef({ items, dragPositions, resolvedPositions });
+  useEffect(() => {
+    dependenciesRef.current = { items, dragPositions, resolvedPositions };
+  }, [items, dragPositions, resolvedPositions]);
+
   const onReorderMouseDown = useCallback(
     (itemId: string, event: React.MouseEvent) => {
       if (event.button !== 0) {
         return;
       }
 
-      const item = items.find((entry) => entry.id === itemId);
+      const { items: currentItems, dragPositions: currentDrag, resolvedPositions: currentResolved } = dependenciesRef.current;
+      const item = currentItems.find((entry) => entry.id === itemId);
       if (!item) {
         return;
       }
 
       event.preventDefault();
-      const itemStart = dragPositions[itemId] ?? resolvedPositions[itemId] ?? {
+      const itemStart = currentDrag[itemId] ?? currentResolved[itemId] ?? {
         x: item.position.x,
         y: Math.max(item.position.y, MIN_MANUAL_Y),
       };
@@ -204,7 +213,7 @@ export function useItemReorder({
       document.addEventListener("mousemove", mouseMoveWrapper);
       document.addEventListener("mouseup", mouseUpWrapper);
     },
-    [dragPositions, items, mouseMoveWrapper, mouseUpWrapper, resolvedPositions],
+    [mouseMoveWrapper, mouseUpWrapper],
   );
 
   useEffect(() => {
