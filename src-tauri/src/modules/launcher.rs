@@ -21,7 +21,7 @@ impl Launcher {
     ///
     /// On Windows we use `cmd /c start "" "path"` so that .lnk and paths
     /// with spaces work reliably (shell.open is deprecated and can misbehave).
-    #[cfg_attr(target_os = "windows", allow(unused_variables))]
+    #[allow(unused_variables)]
     pub fn open(_app: &AppHandle, item_type: &ItemType, path: &str) -> Result<(), String> {
         if !Self::validate_target(path) {
             return Err("Launcher: invalid target path".into());
