@@ -1,5 +1,7 @@
+import { useCallback } from "react";
 import { ShelfGrid } from "../ShelfGrid";
 import { useShelfItems } from "../../hooks/useShelfItems";
+import type { ShelfItem } from "../../types/shelf";
 import { useGlassmorphism } from "../../hooks/useGlassmorphism";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { exitApp, setSettingsExpanded } from "../../utils/tauri-bridge";
@@ -19,6 +21,9 @@ export function ShelfBar({
   orientation = "horizontal"
 }: ShelfBarProps) {
   const { items, removeItem, updateItem } = useShelfItems();
+  const handleDeleteItem = useCallback((id: string) => { void removeItem(id); }, [removeItem]);
+  const handleUpdateItem = useCallback((item: ShelfItem) => updateItem(item), [updateItem]);
+  // Optimize: stabilize callbacks passed to ShelfGrid to allow React.memo on items
   const glassStyle = useGlassmorphism();
   const animationSpeed = useSettingsStore((s) => s.settings.animationSpeed);
   const visibilityClass = isVisible ? "shelf-bar--visible" : "shelf-bar--hidden";
@@ -53,8 +58,8 @@ export function ShelfBar({
             items={items}
             alignment={alignment}
             orientation={orientation}
-            onDeleteItem={(id) => void removeItem(id)}
-            onUpdateItem={(item) => updateItem(item)}
+            onDeleteItem={handleDeleteItem}
+            onUpdateItem={handleUpdateItem}
           />
         )}
         <div className="shelf-bar__right-actions">
