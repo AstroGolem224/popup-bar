@@ -84,6 +84,16 @@ export function useItemReorder({
   const mouseMoveHandlerRef = useRef<(event: MouseEvent) => void>(() => {});
   const mouseUpHandlerRef = useRef<(event: MouseEvent) => void>(() => {});
 
+  // Latest-value refs to stabilize onReorderMouseDown without causing re-renders
+  const latestDragPositionsRef = useRef(dragPositions);
+  latestDragPositionsRef.current = dragPositions;
+
+  const latestResolvedPositionsRef = useRef(resolvedPositions);
+  latestResolvedPositionsRef.current = resolvedPositions;
+
+  const latestItemsRef = useRef(items);
+  latestItemsRef.current = items;
+
   const clearInteractionStyles = useCallback(() => {
     document.body.style.cursor = "";
     document.body.style.userSelect = "";
@@ -183,13 +193,18 @@ export function useItemReorder({
         return;
       }
 
-      const item = items.find((entry) => entry.id === itemId);
+      const itemsList = latestItemsRef.current;
+      const item = itemsList.find((entry) => entry.id === itemId);
       if (!item) {
         return;
       }
 
       event.preventDefault();
-      const itemStart = dragPositions[itemId] ?? resolvedPositions[itemId] ?? {
+
+      const currentDragPositions = latestDragPositionsRef.current;
+      const currentResolvedPositions = latestResolvedPositionsRef.current;
+
+      const itemStart = currentDragPositions[itemId] ?? currentResolvedPositions[itemId] ?? {
         x: item.position.x,
         y: Math.max(item.position.y, MIN_MANUAL_Y),
       };
@@ -204,7 +219,7 @@ export function useItemReorder({
       document.addEventListener("mousemove", mouseMoveWrapper);
       document.addEventListener("mouseup", mouseUpWrapper);
     },
-    [dragPositions, items, mouseMoveWrapper, mouseUpWrapper, resolvedPositions],
+    [mouseMoveWrapper, mouseUpWrapper],
   );
 
   useEffect(() => {

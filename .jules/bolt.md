@@ -1,3 +1,3 @@
-## 2024-05-18 - Drag and Drop Re-renders
-**Learning:** Frequent state updates for positioning coordinates during a local drag-and-drop interaction cause high-frequency unoptimized re-renders across the entire shelf grid. `ShelfItem` components previously re-rendered every time any single item was moved.
-**Action:** When working with local positioning state (like `useItemReorder`), always enforce strict memoization boundaries via `React.memo` on child nodes (like `ShelfItem`) and stabilize inline functions in their parents using `useCallback` to prevent cascading renders.
+## 2024-05-24 - Prevent O(n) Re-Renders on High-Frequency Drag Events
+**Learning:** During rapid drag operations, passing frequently changing state down the component tree (like inline style objects or unstable event callbacks) breaks `React.memo` and forces deep O(n) re-renders for every single item.
+**Action:** Always use the 'latest-value ref pattern' (`useRef` synced on render) to stabilize callback props (`useCallback` with empty dependencies) that depend on rapidly changing state. For layout, avoid inline style objects in favor of explicitly primitive properties (e.g. `positionX={pos.x}`) so `React.memo` can successfully do a shallow comparison.
