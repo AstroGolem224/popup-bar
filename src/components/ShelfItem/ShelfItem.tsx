@@ -1,3 +1,4 @@
+import React from 'react';
 /**
  * ShelfItem — A single item on the shelf (file, folder, app, or URL).
  *
@@ -34,7 +35,9 @@ export interface ShelfItemProps {
   activationBlocked?: boolean;
 }
 
-export function ShelfItem({
+// Optimize: wrap ShelfItem in React.memo to prevent unnecessary re-renders
+// when other items are dragged in the ShelfGrid
+export const ShelfItem = React.memo(function ShelfItem({
   item,
   isDragging = false,
   isDragOver = false,
@@ -155,3 +158,4 @@ export function ShelfItem({
     </div>
   );
 }
+);
