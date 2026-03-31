@@ -112,6 +112,7 @@ export const ShelfItem = React.memo(function ShelfItem({
       style={style}
       data-shelf-item-id={item.id}
       title={item.displayName}
+      role="button"
       tabIndex={0}
       onClick={() => {
         void handleActivate();

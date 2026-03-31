@@ -1,0 +1,3 @@
+## 2024-05-24 - Interactive `div` wrappers lack ARIA roles
+**Learning:** In React components like `ShelfItem` where a root `div` is made interactive (responds to clicks and `Enter`/`Space` via `onKeyDown`) and receives keyboard focus (`tabIndex={0}`), screen readers may fail to announce the element as actionable. This specific codebase pattern relied on implicit behaviors instead of explicit ARIA roles.
+**Action:** Always add `role="button"` (or other appropriate ARIA role) when attaching keyboard and click handlers to non-semantic HTML elements like `div` or `span` to ensure screen readers announce them properly to users navigating via keyboard.

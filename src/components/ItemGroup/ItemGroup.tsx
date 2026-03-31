@@ -90,11 +90,20 @@ export function ItemGroup({
           />
         ) : (
           <span
+            role="button"
+            tabIndex={0}
             className="item-group__label item-group__label--editable"
-            title="Doppelklick zum Umbenennen"
+            title="Doppelklick oder Enter zum Umbenennen"
             onDoubleClick={() => {
               setDraftName(group.name);
               setIsEditingName(true);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                setDraftName(group.name);
+                setIsEditingName(true);
+              }
             }}
           >
             {group.name}
