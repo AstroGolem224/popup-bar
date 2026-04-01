@@ -120,6 +120,9 @@ export const ShelfItem = React.memo(function ShelfItem({
         if (event.key === "Enter" || event.key === " ") {
           event.preventDefault();
           void handleActivate();
+        } else if ((event.key === "Delete" || event.key === "Backspace") && onDelete) {
+          event.preventDefault();
+          void onDelete(item.id);
         }
       }}
       onMouseDown={(e) => {

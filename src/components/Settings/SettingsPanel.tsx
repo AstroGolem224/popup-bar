@@ -63,7 +63,14 @@ function SkinGrid({
             type="button"
             className={`skin-tile${activeSkin === skin.filename ? " skin-tile--active" : ""}`}
             onClick={() => onSelect(skin.filename)}
-            title={skin.name}
+            title={`${skin.name} (Entf zum Löschen)`}
+            onKeyDown={(event) => {
+              if (event.key === "Delete" || event.key === "Backspace") {
+                event.preventDefault();
+                event.stopPropagation();
+                onDelete(skin.filename);
+              }
+            }}
           >
             {previews[skin.filename] ? (
               <img

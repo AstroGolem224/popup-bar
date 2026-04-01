@@ -1,0 +1,3 @@
+## 2025-02-28 - Keyboard deletion support for nested actions
+**Learning:** Nested non-focusable delete actions inside buttons or links require explicit `onKeyDown` handlers (e.g., Delete/Backspace) on the parent container, and focus indicators (`focus-visible`) for keyboard accessibility. Screen reader users and keyboard navigators otherwise have no way to access or delete items.
+**Action:** Always test components with nested actions using the keyboard (tabbing and Delete/Enter). When placing a delete span/button inside a parent button, ensure the parent captures keyboard events to trigger the delete action when focused, and add appropriate ARIA labels or titles to hint the action.

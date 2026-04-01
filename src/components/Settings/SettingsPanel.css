@@ -125,6 +125,11 @@
   box-shadow: 0 0 0 1px rgba(99, 179, 237, 0.4);
 }
 
+.skin-tile:focus-visible {
+  outline: 2px solid rgba(99, 179, 237, 0.8);
+  outline-offset: 2px;
+}
+
 .skin-tile--none {
   display: flex;
   align-items: center;

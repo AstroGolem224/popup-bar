@@ -34,11 +34,13 @@
   transition: opacity 0.15s, background 0.15s;
 }
 
-.shelf-item:hover .shelf-item__delete {
+.shelf-item:hover .shelf-item__delete,
+.shelf-item:focus-within .shelf-item__delete {
   opacity: 1;
 }
 
-.shelf-item__delete:hover {
+.shelf-item__delete:hover,
+.shelf-item__delete:focus-visible {
   background: rgba(200, 80, 80, 0.9);
   color: white;
 }
@@ -55,6 +57,11 @@
 }
 
 .shelf-item:focus-visible {
+  outline: 2px solid rgba(99, 179, 237, 0.8);
+  outline-offset: 2px;
+}
+
+.shelf-item__delete:focus-visible {
   outline: 2px solid rgba(99, 179, 237, 0.8);
   outline-offset: 2px;
 }
