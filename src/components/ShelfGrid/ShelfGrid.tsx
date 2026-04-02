@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useMemo, useCallback } from "react";
 import { ShelfItem as ShelfItemComponent } from "../ShelfItem";
 import type { ShelfItem } from "../../types/shelf";
 import { useItemReorder, type ItemPosition } from "../../hooks/useItemReorder";
@@ -81,6 +81,22 @@ export function ShelfGrid({
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerSize, setContainerSize] = useState({ width: 480, height: 72 });
 
+  const onDeleteItemRef = useRef(onDeleteItem);
+  const onUpdateItemRef = useRef(onUpdateItem);
+
+  useEffect(() => {
+    onDeleteItemRef.current = onDeleteItem;
+    onUpdateItemRef.current = onUpdateItem;
+  }, [onDeleteItem, onUpdateItem]);
+
+  const stableOnDeleteItem = useCallback((id: string) => {
+    return onDeleteItemRef.current?.(id);
+  }, []);
+
+  const stableOnUpdateItem = useCallback((item: ShelfItem) => {
+    return onUpdateItemRef.current?.(item) ?? Promise.resolve();
+  }, []);
+
   useEffect(() => {
     const element = containerRef.current;
     if (!element) {
@@ -103,12 +119,14 @@ export function ShelfGrid({
     };
   }, []);
 
-  const basePositions = items.reduce<Record<string, ItemPosition>>((positions, item, index) => {
-    positions[item.id] = isLegacyPosition(item, items.length)
-      ? buildAutoLayoutPosition(index, items.length, alignment, orientation, containerSize)
-      : normalizeManualPosition(item.position, containerSize);
-    return positions;
-  }, {});
+  const basePositions = useMemo(() => {
+    return items.reduce<Record<string, ItemPosition>>((positions, item, index) => {
+      positions[item.id] = isLegacyPosition(item, items.length)
+        ? buildAutoLayoutPosition(index, items.length, alignment, orientation, containerSize)
+        : normalizeManualPosition(item.position, containerSize);
+      return positions;
+    }, {});
+  }, [items, alignment, orientation, containerSize]);
 
   const { onReorderMouseDown, draggingId, dragPositions, activationBlockedId } = useItemReorder({
     items,
@@ -121,22 +139,27 @@ export function ShelfGrid({
         return;
       }
 
-      await onUpdateItem({
+      await stableOnUpdateItem({
         ...item,
         position,
       });
     },
   });
 
-  const resolvedPositions = { ...basePositions, ...dragPositions };
-  const orderedItems = [...items].sort((left, right) => {
-    const leftPosition = resolvedPositions[left.id] ?? { x: 0, y: 0 };
-    const rightPosition = resolvedPositions[right.id] ?? { x: 0, y: 0 };
-    if (leftPosition.y !== rightPosition.y) {
-      return leftPosition.y - rightPosition.y;
-    }
-    return leftPosition.x - rightPosition.x;
-  });
+  const resolvedPositions = useMemo(() => {
+    return { ...basePositions, ...dragPositions };
+  }, [basePositions, dragPositions]);
+
+  const orderedItems = useMemo(() => {
+    return [...items].sort((left, right) => {
+      const leftPosition = resolvedPositions[left.id] ?? { x: 0, y: 0 };
+      const rightPosition = resolvedPositions[right.id] ?? { x: 0, y: 0 };
+      if (leftPosition.y !== rightPosition.y) {
+        return leftPosition.y - rightPosition.y;
+      }
+      return leftPosition.x - rightPosition.x;
+    });
+  }, [items, resolvedPositions]);
 
   return (
     <div
@@ -150,14 +173,11 @@ export function ShelfGrid({
           <ShelfItemComponent
             key={item.id}
             item={item}
-            style={{
-              position: "absolute",
-              left: `${position.x}px`,
-              top: `${position.y}px`,
-            }}
+            positionX={position.x}
+            positionY={position.y}
             isDragging={draggingId === item.id}
             onReorderMouseDown={onReorderMouseDown}
-            onDelete={onDeleteItem}
+            onDelete={onDeleteItem ? stableOnDeleteItem : undefined}
             activationBlocked={activationBlockedId === item.id}
           />
         );

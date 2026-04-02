@@ -33,6 +33,10 @@ export interface ShelfItemProps {
   style?: CSSProperties;
   /** Suppresses accidental open directly after dragging. */
   activationBlocked?: boolean;
+  /** Memoized position X for layout system */
+  positionX?: number;
+  /** Memoized position Y for layout system */
+  positionY?: number;
 }
 
 // Optimize: wrap ShelfItem in React.memo to prevent unnecessary re-renders
@@ -44,6 +48,8 @@ export const ShelfItem = React.memo(function ShelfItem({
   onReorderMouseDown,
   onDelete,
   style,
+  positionX,
+  positionY,
   activationBlocked = false,
 }: ShelfItemProps) {
   const [iconLoadFailed, setIconLoadFailed] = useState(false);
@@ -106,10 +112,15 @@ export const ShelfItem = React.memo(function ShelfItem({
     isDragOver ? "shelf-item--drag-over" : "",
   ].filter(Boolean).join(" ");
 
+  const combinedStyle: CSSProperties | undefined =
+    positionX !== undefined && positionY !== undefined
+      ? { ...style, position: "absolute", left: `${positionX}px`, top: `${positionY}px` }
+      : style;
+
   return (
     <div
       className={classNames}
-      style={style}
+      style={combinedStyle}
       data-shelf-item-id={item.id}
       title={item.displayName}
       tabIndex={0}
