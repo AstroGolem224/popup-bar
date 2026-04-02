@@ -63,6 +63,12 @@ function SkinGrid({
             type="button"
             className={`skin-tile${activeSkin === skin.filename ? " skin-tile--active" : ""}`}
             onClick={() => onSelect(skin.filename)}
+            onKeyDown={(event) => {
+              if (event.key === "Delete" || event.key === "Backspace") {
+                event.stopPropagation();
+                onDelete(skin.filename);
+              }
+            }}
             title={skin.name}
           >
             {previews[skin.filename] ? (

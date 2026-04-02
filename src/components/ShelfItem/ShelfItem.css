@@ -34,7 +34,9 @@
   transition: opacity 0.15s, background 0.15s;
 }
 
-.shelf-item:hover .shelf-item__delete {
+.shelf-item:hover .shelf-item__delete,
+.shelf-item:focus-visible .shelf-item__delete,
+.shelf-item:focus-within .shelf-item__delete {
   opacity: 1;
 }
 
