@@ -120,6 +120,11 @@
   transform: scale(1.04);
 }
 
+.skin-tile:focus-visible {
+  outline: 2px solid rgba(99, 179, 237, 0.8);
+  outline-offset: 2px;
+}
+
 .skin-tile--active {
   border-color: rgba(99, 179, 237, 0.9);
   box-shadow: 0 0 0 1px rgba(99, 179, 237, 0.4);

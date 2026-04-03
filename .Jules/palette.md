@@ -1,0 +1,3 @@
+## 2025-04-03 - Nested Interactive Elements in React Components
+**Learning:** Nesting interactive elements like `<button>` inside another `<button>` (e.g., placing a delete button inside a clickable tile button) causes invalid HTML and breaks expected screen reader and keyboard behaviors. This is a common pattern for "tiles with actions".
+**Action:** Use non-button semantic tags like `<span>` with `aria-hidden="true"` for inner visual targets if the parent is already a button or role="button". Explicitly add `onKeyDown` handlers (e.g., `Delete`/`Backspace`) to the parent container to support keyboard-only users, and pair this with `:focus-within` or `:focus-visible` styling so users can trigger the nested action cleanly via keyboard.
