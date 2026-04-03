@@ -31,6 +31,10 @@ export interface ShelfItemProps {
   onDelete?: (id: string) => void | Promise<void>;
   /** Inline positioning style from the layout system. */
   style?: CSSProperties;
+  /** ⚡ Bolt: Primitive X coordinate to prevent inline style re-renders */
+  positionX?: number;
+  /** ⚡ Bolt: Primitive Y coordinate to prevent inline style re-renders */
+  positionY?: number;
   /** Suppresses accidental open directly after dragging. */
   activationBlocked?: boolean;
 }
@@ -44,6 +48,8 @@ export const ShelfItem = React.memo(function ShelfItem({
   onReorderMouseDown,
   onDelete,
   style,
+  positionX,
+  positionY,
   activationBlocked = false,
 }: ShelfItemProps) {
   const [iconLoadFailed, setIconLoadFailed] = useState(false);
@@ -99,6 +105,11 @@ export const ShelfItem = React.memo(function ShelfItem({
     }
   };
 
+  // ⚡ Bolt: Compute style internally using primitives to maintain React.memo optimization
+  const appliedStyle = positionX !== undefined && positionY !== undefined
+    ? { ...style, position: "absolute" as const, left: `${positionX}px`, top: `${positionY}px` }
+    : style;
+
   const classNames = [
     "shelf-item",
     `shelf-item--${item.itemType}`,
@@ -109,7 +120,7 @@ export const ShelfItem = React.memo(function ShelfItem({
   return (
     <div
       className={classNames}
-      style={style}
+      style={appliedStyle}
       data-shelf-item-id={item.id}
       title={item.displayName}
       tabIndex={0}

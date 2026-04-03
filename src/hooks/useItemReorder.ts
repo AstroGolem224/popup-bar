@@ -177,19 +177,26 @@ export function useItemReorder({
     mouseUpHandlerRef.current(event as MouseEvent);
   }, []);
 
+  // ⚡ Bolt: Latest-value ref pattern to keep onReorderMouseDown stable and prevent cascading re-renders
+  const stateRef = useRef({ items, resolvedPositions, dragPositions });
+  useEffect(() => {
+    stateRef.current = { items, resolvedPositions, dragPositions };
+  }, [items, resolvedPositions, dragPositions]);
+
   const onReorderMouseDown = useCallback(
     (itemId: string, event: React.MouseEvent) => {
       if (event.button !== 0) {
         return;
       }
 
-      const item = items.find((entry) => entry.id === itemId);
+      const { items: currentItems, resolvedPositions: currentResolvedPositions, dragPositions: currentDragPositions } = stateRef.current;
+      const item = currentItems.find((entry) => entry.id === itemId);
       if (!item) {
         return;
       }
 
       event.preventDefault();
-      const itemStart = dragPositions[itemId] ?? resolvedPositions[itemId] ?? {
+      const itemStart = currentDragPositions[itemId] ?? currentResolvedPositions[itemId] ?? {
         x: item.position.x,
         y: Math.max(item.position.y, MIN_MANUAL_Y),
       };
@@ -204,7 +211,7 @@ export function useItemReorder({
       document.addEventListener("mousemove", mouseMoveWrapper);
       document.addEventListener("mouseup", mouseUpWrapper);
     },
-    [dragPositions, items, mouseMoveWrapper, mouseUpWrapper, resolvedPositions],
+    [mouseMoveWrapper, mouseUpWrapper],
   );
 
   useEffect(() => {
