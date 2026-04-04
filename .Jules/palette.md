@@ -1,0 +1,3 @@
+## 2025-05-15 - Fixing Nested Interactive Elements Accessibility
+**Learning:** Placing interactive elements like `<button>` or `<span role="button">` inside another `<button>` or keyboard-accessible container (like `div[tabIndex="0"]`) produces invalid HTML, creates accessibility traps for screen readers, and prevents keyboard users from triggering the inner action.
+**Action:** When a parent element needs to be interactive (like a tile or list item) and contains secondary actions (like delete), use `aria-hidden="true"` on the inner visual target, move the keyboard event handling (e.g., `Delete`/`Backspace`) to the parent container, and update the parent's `aria-label` or `title` to announce the keyboard shortcut to screen reader users.
