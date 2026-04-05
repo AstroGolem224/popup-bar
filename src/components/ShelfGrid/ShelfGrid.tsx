@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ShelfItem as ShelfItemComponent } from "../ShelfItem";
 import type { ShelfItem } from "../../types/shelf";
 import { useItemReorder, type ItemPosition } from "../../hooks/useItemReorder";
@@ -110,22 +110,40 @@ export function ShelfGrid({
     return positions;
   }, {});
 
+  const onUpdateItemRef = useRef(onUpdateItem);
+  useEffect(() => {
+    onUpdateItemRef.current = onUpdateItem;
+  }, [onUpdateItem]);
+
+  const handleCommitPosition = useCallback(async (itemId: string, position: ItemPosition) => {
+    const item = items.find((entry) => entry.id === itemId);
+    if (!item) {
+      return;
+    }
+
+    await onUpdateItemRef.current({
+      ...item,
+      position,
+    });
+  }, [items]);
+
+  const onDeleteItemRef = useRef(onDeleteItem);
+  useEffect(() => {
+    onDeleteItemRef.current = onDeleteItem;
+  }, [onDeleteItem]);
+
+  const handleDeleteItem = useCallback((id: string) => {
+    if (onDeleteItemRef.current) {
+      return onDeleteItemRef.current(id);
+    }
+  }, []);
+
   const { onReorderMouseDown, draggingId, dragPositions, activationBlockedId } = useItemReorder({
     items,
     resolvedPositions: basePositions,
     containerSize,
     alignment,
-    onCommitPosition: async (itemId, position) => {
-      const item = items.find((entry) => entry.id === itemId);
-      if (!item) {
-        return;
-      }
-
-      await onUpdateItem({
-        ...item,
-        position,
-      });
-    },
+    onCommitPosition: handleCommitPosition,
   });
 
   const resolvedPositions = { ...basePositions, ...dragPositions };
@@ -150,14 +168,11 @@ export function ShelfGrid({
           <ShelfItemComponent
             key={item.id}
             item={item}
-            style={{
-              position: "absolute",
-              left: `${position.x}px`,
-              top: `${position.y}px`,
-            }}
+            positionX={position.x}
+            positionY={position.y}
             isDragging={draggingId === item.id}
             onReorderMouseDown={onReorderMouseDown}
-            onDelete={onDeleteItem}
+            onDelete={onDeleteItem ? handleDeleteItem : undefined}
             activationBlocked={activationBlockedId === item.id}
           />
         );
