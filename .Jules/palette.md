@@ -1,0 +1,3 @@
+## 2025-04-05 - Refactor nested interactive elements for better accessibility
+**Learning:** Placing interactive elements like `<span role="button">` inside a clickable `<button>` creates invalid HTML and disrupts screen reader and keyboard navigation, as users can't tab to or interact with the inner element properly.
+**Action:** Move keyboard interaction logic (e.g., `onKeyDown` for `Delete`/`Backspace`) to the parent container, update its `aria-label` or `title` to announce the hidden action's keyboard shortcut, and add `aria-hidden="true"` to the inner element while retaining its visual `onClick` handler.
