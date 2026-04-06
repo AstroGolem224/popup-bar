@@ -29,8 +29,10 @@ export interface ShelfItemProps {
   onReorderMouseDown?: (id: string, event: React.MouseEvent) => void;
   /** Callback when delete (X) is clicked. */
   onDelete?: (id: string) => void | Promise<void>;
-  /** Inline positioning style from the layout system. */
-  style?: CSSProperties;
+  /** X coordinate for absolute positioning from layout system. */
+  positionX?: number;
+  /** Y coordinate for absolute positioning from layout system. */
+  positionY?: number;
   /** Suppresses accidental open directly after dragging. */
   activationBlocked?: boolean;
 }
@@ -43,7 +45,8 @@ export const ShelfItem = React.memo(function ShelfItem({
   isDragOver = false,
   onReorderMouseDown,
   onDelete,
-  style,
+  positionX,
+  positionY,
   activationBlocked = false,
 }: ShelfItemProps) {
   const [iconLoadFailed, setIconLoadFailed] = useState(false);
@@ -106,10 +109,15 @@ export const ShelfItem = React.memo(function ShelfItem({
     isDragOver ? "shelf-item--drag-over" : "",
   ].filter(Boolean).join(" ");
 
+  const computedStyle: CSSProperties | undefined =
+    positionX !== undefined && positionY !== undefined
+      ? { position: "absolute", left: `${positionX}px`, top: `${positionY}px` }
+      : undefined;
+
   return (
     <div
       className={classNames}
-      style={style}
+      style={computedStyle}
       data-shelf-item-id={item.id}
       title={item.displayName}
       tabIndex={0}
