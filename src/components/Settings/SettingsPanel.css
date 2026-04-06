@@ -157,7 +157,8 @@
   z-index: 1;
 }
 
-.skin-tile:hover .skin-tile__delete {
+.skin-tile:hover .skin-tile__delete,
+.skin-tile:focus-visible .skin-tile__delete {
   color: rgba(255, 255, 255, 0.8);
 }
 

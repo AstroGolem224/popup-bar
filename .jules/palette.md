@@ -1,0 +1,3 @@
+## 2025-03-01 - Avoid Nested Interactive Elements for Accessibility
+**Learning:** Placing an interactive element like `<span role="button">` or `<button>` inside another interactive element (like a `<button>` acting as a tile) creates invalid HTML and severely confuses screen readers. Keyboard users cannot naturally tab into the inner element without complex workarounds.
+**Action:** Instead of nesting buttons, make the inner element visually responsive but non-interactive (`aria-hidden="true"`). Map the inner action to an `onKeyDown` handler (e.g., `Delete` or `Backspace`) on the parent container, explicitly announce the shortcut in the parent's `title` or `aria-label`, and ensure the inner action becomes visible via `:focus-visible` when the parent receives focus.
