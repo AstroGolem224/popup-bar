@@ -1,0 +1,3 @@
+## 2023-10-24 - Accessibility of Nested Interactive Elements
+**Learning:** Adding a `<button>` inside another focusable/clickable element (like a button or a div with tabIndex) creates invalid HTML semantics, breaks screen reader navigation, and creates focus-traps or untabbable inner elements. This was observed in `SkinGrid` (button in button) and `ShelfItem` (button in tabIndex div).
+**Action:** Always use non-focusable elements (like `<span aria-hidden="true">`) for nested visual actions within an already interactive container. Move the keyboard accessibility logic (e.g., handling "Delete" and "Backspace") to the parent element's `onKeyDown` and announce the shortcut via the parent's `title` or `aria-label`.

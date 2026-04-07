@@ -111,7 +111,7 @@ export const ShelfItem = React.memo(function ShelfItem({
       className={classNames}
       style={style}
       data-shelf-item-id={item.id}
-      title={item.displayName}
+      title={onDelete ? `${item.displayName} (Entf zum Entfernen)` : item.displayName}
       tabIndex={0}
       onClick={() => {
         void handleActivate();
@@ -120,6 +120,10 @@ export const ShelfItem = React.memo(function ShelfItem({
         if (event.key === "Enter" || event.key === " ") {
           event.preventDefault();
           void handleActivate();
+        } else if (onDelete && (event.key === "Delete" || event.key === "Backspace")) {
+          event.preventDefault();
+          event.stopPropagation();
+          void onDelete(item.id);
         }
       }}
       onMouseDown={(e) => {
@@ -127,20 +131,18 @@ export const ShelfItem = React.memo(function ShelfItem({
       }}
     >
       {onDelete ? (
-        <button
-          type="button"
+        <span
           className="shelf-item__delete"
+          aria-hidden="true"
           onClick={(e) => {
             e.stopPropagation();
             e.preventDefault();
             void onDelete(item.id);
           }}
           onMouseDown={(e) => e.stopPropagation()}
-          aria-label="Item entfernen"
-          title="Entfernen"
         >
           ×
-        </button>
+        </span>
       ) : null}
       <div className="shelf-item__icon" title={item.displayName}>
         {iconDataUrl && !iconLoadFailed ? (

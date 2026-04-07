@@ -63,7 +63,14 @@ function SkinGrid({
             type="button"
             className={`skin-tile${activeSkin === skin.filename ? " skin-tile--active" : ""}`}
             onClick={() => onSelect(skin.filename)}
-            title={skin.name}
+            onKeyDown={(event) => {
+              if (event.key === "Delete" || event.key === "Backspace") {
+                event.preventDefault();
+                event.stopPropagation();
+                onDelete(skin.filename);
+              }
+            }}
+            title={`${skin.name} (Entf zum Loeschen)`}
           >
             {previews[skin.filename] ? (
               <img
@@ -74,8 +81,7 @@ function SkinGrid({
             ) : null}
             <span
               className="skin-tile__delete"
-              role="button"
-              aria-label={`${skin.name} loeschen`}
+              aria-hidden="true"
               onClick={(event) => {
                 event.stopPropagation();
                 onDelete(skin.filename);
