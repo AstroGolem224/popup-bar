@@ -49,32 +49,40 @@ function SkinGrid({
   return (
     <div className="skin-grid">
       <div className="skin-grid__items">
-        <button
-          type="button"
-          className={`skin-tile skin-tile--none${!activeSkin ? " skin-tile--active" : ""}`}
-          onClick={() => onSelect(null)}
-          title="Standard (Glassmorphism)"
-        >
-          <span className="skin-tile__label">Standard</span>
-        </button>
-        {skins.map((skin) => (
+        <div className={`skin-tile skin-tile--none${!activeSkin ? " skin-tile--active" : ""}`}>
           <button
-            key={skin.filename}
             type="button"
+            className="skin-tile__select"
+            onClick={() => onSelect(null)}
+            title="Standard (Glassmorphism)"
+            aria-label="Skin Standard auswaehlen"
+          >
+            <span className="skin-tile__label">Standard</span>
+          </button>
+        </div>
+        {skins.map((skin) => (
+          <div
+            key={skin.filename}
             className={`skin-tile${activeSkin === skin.filename ? " skin-tile--active" : ""}`}
-            onClick={() => onSelect(skin.filename)}
             title={skin.name}
           >
-            {previews[skin.filename] ? (
-              <img
-                className="skin-tile__preview"
-                src={previews[skin.filename]}
-                alt={skin.name}
-              />
-            ) : null}
-            <span
+            <button
+              type="button"
+              className="skin-tile__select"
+              onClick={() => onSelect(skin.filename)}
+              aria-label={`Skin ${skin.name} auswaehlen`}
+            >
+              {previews[skin.filename] ? (
+                <img
+                  className="skin-tile__preview"
+                  src={previews[skin.filename]}
+                  alt=""
+                />
+              ) : null}
+            </button>
+            <button
+              type="button"
               className="skin-tile__delete"
-              role="button"
               aria-label={`${skin.name} loeschen`}
               onClick={(event) => {
                 event.stopPropagation();
@@ -82,8 +90,8 @@ function SkinGrid({
               }}
             >
               ×
-            </span>
-          </button>
+            </button>
+          </div>
         ))}
       </div>
       <button type="button" className="skin-grid__import-btn" onClick={onImport}>
