@@ -84,6 +84,9 @@ export function useItemReorder({
   const mouseMoveHandlerRef = useRef<(event: MouseEvent) => void>(() => {});
   const mouseUpHandlerRef = useRef<(event: MouseEvent) => void>(() => {});
 
+  const latestStateRef = useRef({ items, dragPositions, resolvedPositions });
+  latestStateRef.current = { items, dragPositions, resolvedPositions };
+
   const clearInteractionStyles = useCallback(() => {
     document.body.style.cursor = "";
     document.body.style.userSelect = "";
@@ -183,13 +186,14 @@ export function useItemReorder({
         return;
       }
 
-      const item = items.find((entry) => entry.id === itemId);
+      const { items: currentItems, dragPositions: currentDragPositions, resolvedPositions: currentResolvedPositions } = latestStateRef.current;
+      const item = currentItems.find((entry) => entry.id === itemId);
       if (!item) {
         return;
       }
 
       event.preventDefault();
-      const itemStart = dragPositions[itemId] ?? resolvedPositions[itemId] ?? {
+      const itemStart = currentDragPositions[itemId] ?? currentResolvedPositions[itemId] ?? {
         x: item.position.x,
         y: Math.max(item.position.y, MIN_MANUAL_Y),
       };
