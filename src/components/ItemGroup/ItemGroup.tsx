@@ -4,11 +4,11 @@ import React, { useRef, useState } from "react";
 import "./ItemGroup.css";
 
 const GROUP_COLORS = [
-  "rgba(255,255,255,0.2)",
-  "rgba(100,180,255,0.6)",
-  "rgba(120,255,120,0.5)",
-  "rgba(255,180,100,0.5)",
-  "rgba(255,120,200,0.5)",
+  { value: "rgba(255,255,255,0.2)", name: "Weiß" },
+  { value: "rgba(100,180,255,0.6)", name: "Blau" },
+  { value: "rgba(120,255,120,0.5)", name: "Grün" },
+  { value: "rgba(255,180,100,0.5)", name: "Orange" },
+  { value: "rgba(255,120,200,0.5)", name: "Pink" },
 ];
 
 export interface ItemGroupProps {
@@ -102,16 +102,16 @@ export function ItemGroup({
         )}
         <div className="item-group__actions">
           {onUpdateGroup
-            ? GROUP_COLORS.map((color) => (
+            ? GROUP_COLORS.map((colorInfo) => (
                 <button
-                  key={color}
+                  key={colorInfo.value}
                   type="button"
                   className="item-group__color"
-                  style={{ backgroundColor: color }}
-                  title="Farbe ändern"
-                  aria-label="Farbe"
+                  style={{ backgroundColor: colorInfo.value }}
+                  title={colorInfo.name}
+                  aria-label={colorInfo.name}
                   onClick={() =>
-                    void onUpdateGroup({ ...group, color })
+                    void onUpdateGroup({ ...group, color: colorInfo.value })
                   }
                 />
               ))
