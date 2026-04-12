@@ -309,17 +309,35 @@ impl ShelfStore {
     }
 
     pub async fn reorder_items(ordered_ids: Vec<String>) -> Result<(), String> {
-        let pool = Self::pool().await?;
-        let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
-        for (index, id) in ordered_ids.iter().enumerate() {
-            sqlx::query("UPDATE shelf_items SET position_x = ?1, position_y = 0.0 WHERE id = ?2")
-                .bind(index as f64)
-                .bind(id)
-                .execute(&mut *tx)
-                .await
-                .map_err(|e| e.to_string())?;
+        if ordered_ids.is_empty() {
+            return Ok(());
         }
-        tx.commit().await.map_err(|e| e.to_string())?;
+
+        let pool = Self::pool().await?;
+
+        let mut query_builder: sqlx::QueryBuilder<sqlx::Sqlite> = sqlx::QueryBuilder::new(
+            "UPDATE shelf_items SET position_x = CASE id "
+        );
+
+        for (index, id) in ordered_ids.iter().enumerate() {
+            query_builder.push("WHEN ");
+            query_builder.push_bind(id.clone());
+            query_builder.push(" THEN ");
+            query_builder.push_bind(index as f64);
+            query_builder.push(" ");
+        }
+
+        query_builder.push("END, position_y = 0.0 WHERE id IN (");
+
+        let mut separated = query_builder.separated(", ");
+        for id in ordered_ids.iter() {
+            separated.push_bind(id.clone());
+        }
+        separated.push_unseparated(")");
+
+        let query = query_builder.build();
+        query.execute(pool).await.map_err(|e| e.to_string())?;
+
         Ok(())
     }
 
