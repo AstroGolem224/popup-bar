@@ -1,11 +1,10 @@
-import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { ItemGroup } from './ItemGroup';
-import { vi } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 
 describe('ItemGroup', () => {
   it('renders specific ARIA labels for color picker buttons', () => {
-    const mockGroup = { id: 'g1', name: 'My Group', itemType: 'group' as const, path: '', iconCacheKey: '', children: [] };
+    const mockGroup = { id: 'g1', name: 'My Group', itemType: 'group' as const, path: '', iconCacheKey: '', children: [], position: { x: 0, y: 0 } };
     const onUpdateGroup = vi.fn();
 
     render(
